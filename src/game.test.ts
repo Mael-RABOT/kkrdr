@@ -28,7 +28,7 @@ describe('score', () => {
 describe('awards', () => {
   const now = new Date('2026-10-21T12:00'); // Wednesday
   const data = [
-    poop('a', '2026-10-06T08:00', { rating: 5 }), // week of Oct 5: a wins (10)
+    poop('a', '2026-10-06T08:00', { rating: 5, perfect: true }), // week of Oct 5: a wins (10)
     poop('b', '2026-10-07T08:00', { rating: 4 }), // 8
     poop('b', '2026-10-13T08:00', { rating: 3, votes: { a: 1, c: 1, d: 1 } }), // week of Oct 12: b wins (9)
     poop('a', '2026-10-14T08:00', { type: 6, rating: 5 }), // 5

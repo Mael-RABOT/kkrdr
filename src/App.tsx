@@ -6,6 +6,7 @@ import TabBar from './components/TabBar';
 import Welcome from './pages/Welcome';
 import Feed from './pages/Feed';
 import NewPoop from './pages/NewPoop';
+import EditPoop from './pages/EditPoop';
 import Stats from './pages/Stats';
 import Top from './pages/Top';
 import Profile from './pages/Profile';
@@ -33,6 +34,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Feed />} />
           <Route path="/new" element={<NewPoop />} />
+          <Route path="/edit/:id" element={<EditPoop />} />
           <Route path="/top" element={<Top />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/u/:id" element={<Profile />} />

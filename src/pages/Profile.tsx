@@ -55,64 +55,66 @@ export default function Profile() {
             </div>
           </div>
 
-          <section className="card">
-            <h2>
-              {t('profile.badges')} <span className="muted h2-sub">{t('profile.badgeCount', { n: unlocked.length, total: BADGES.length })}</span>
-            </h2>
-            <div className="badges">
-              {[...unlocked, ...locked].map((b) => {
-                const has = p.badges.has(b.id);
-                return (
-                  <div key={b.id} className={`badge-item${has ? '' : ' locked'}`}>
-                    <Badge def={b} locked={!has} />
-                    <strong>{t(`badge.${b.id}.name` as Key)}</strong>
-                    <small>{t(`badge.${b.id}.desc` as Key)}</small>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {best.length > 0 && (
+          <div className="grid-2">
             <section className="card">
-              <h2>{t('profile.best')}</h2>
-              <ol className="lb">
-                {best.map((x, i) => (
-                  <li key={x.id}>
-                    <span className={`rank r${i + 1}`}>{i + 1}</span>
-                    <span className="lb-main">
-                      <span className="lb-name">
-                        {t(`type.${x.type}` as Key)} · {t(`size.${x.size}` as Key)}
-                      </span>
-                      <span className="lb-sub">
-                        {shortDate(x.at)}
-                        {x.note ? ` · ${x.note}` : ''}
-                      </span>
-                    </span>
-                    <ScorePill poop={x} />
-                  </li>
-                ))}
-              </ol>
+              <h2>
+                {t('profile.badges')} <span className="muted h2-sub">{t('profile.badgeCount', { n: unlocked.length, total: BADGES.length })}</span>
+              </h2>
+              <div className="badges">
+                {[...unlocked, ...locked].map((b) => {
+                  const has = p.badges.has(b.id);
+                  return (
+                    <div key={b.id} className={`badge-item${has ? '' : ' locked'}`}>
+                      <Badge def={b} locked={!has} />
+                      <strong>{t(`badge.${b.id}.name` as Key)}</strong>
+                      <small>{t(`badge.${b.id}.desc` as Key)}</small>
+                    </div>
+                  );
+                })}
+              </div>
             </section>
-          )}
 
-          <section className="card">
-            <h2>{t('profile.numbers')}</h2>
-            <dl className="kv">
-              <dt>{t('profile.logged')}</dt>
-              <dd>{p.count}</dd>
-              <dt>{t('stats.longestStreak')}</dt>
-              <dd>{t('common.days', { n: p.streak })}</dd>
-              <dt>{t('profile.upvotes')}</dt>
-              <dd>{p.upvotes}</dd>
-              <dt>{t('profile.votesCast')}</dt>
-              <dd>{p.votesCast}</dd>
-              <dt>{t('profile.weekWins')}</dt>
-              <dd>{p.weekWins}</dd>
-              <dt>{t('profile.monthWins')}</dt>
-              <dd>{p.monthWins}</dd>
-            </dl>
-          </section>
+            {best.length > 0 && (
+              <section className="card">
+                <h2>{t('profile.best')}</h2>
+                <ol className="lb">
+                  {best.map((x, i) => (
+                    <li key={x.id}>
+                      <span className={`rank r${i + 1}`}>{i + 1}</span>
+                      <span className="lb-main">
+                        <span className="lb-name">
+                          {x.perfect ? t('feed.perfect') : t(`type.${x.type}` as Key)} · {t(`size.${x.size}` as Key)}
+                        </span>
+                        <span className="lb-sub">
+                          {shortDate(x.at)}
+                          {x.note ? ` · ${x.note}` : ''}
+                        </span>
+                      </span>
+                      <ScorePill poop={x} />
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+
+            <section className="card">
+              <h2>{t('profile.numbers')}</h2>
+              <dl className="kv">
+                <dt>{t('profile.logged')}</dt>
+                <dd>{p.count}</dd>
+                <dt>{t('stats.longestStreak')}</dt>
+                <dd>{t('common.days', { n: p.streak })}</dd>
+                <dt>{t('profile.upvotes')}</dt>
+                <dd>{p.upvotes}</dd>
+                <dt>{t('profile.votesCast')}</dt>
+                <dd>{p.votesCast}</dd>
+                <dt>{t('profile.weekWins')}</dt>
+                <dd>{p.weekWins}</dd>
+                <dt>{t('profile.monthWins')}</dt>
+                <dd>{p.monthWins}</dd>
+              </dl>
+            </section>
+          </div>
         </>
       )}
     </>

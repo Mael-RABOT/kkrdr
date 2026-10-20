@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
 import { countPoops, createUser, inviteLink, keysFor, regenerateKey, removeUser, revokeKeys, updateUser } from '../data';
+import { useDialogs } from '../dialogs';
 import { useT } from '../i18n';
 import { useSession } from '../session';
 import type { User } from '../types';
@@ -94,6 +95,7 @@ function UserRow({
   setShown: (key: string | null) => void;
 }) {
   const t = useT();
+  const dialogs = useDialogs();
   const { me } = useSession();
   const [count, setCount] = useState<number | null>(null);
   const self = user.id === me?.id;
@@ -129,8 +131,8 @@ function UserRow({
         <button
           className="sm"
           disabled={busy}
-          onClick={() =>
-            confirm(t('admin.confirmNewKey', { name: user.name })) &&
+          onClick={async () =>
+            (await dialogs.confirm({ title: t('admin.newKey'), message: t('admin.confirmNewKey', { name: user.name }) })) &&
             run(async () => setShown(await regenerateKey(user.id)))
           }
         >
@@ -141,8 +143,8 @@ function UserRow({
             <button
               className="sm"
               disabled={busy}
-              onClick={() =>
-                confirm(t('admin.confirmRevoke', { name: user.name })) &&
+              onClick={async () =>
+                (await dialogs.confirm({ title: t('admin.revoke'), message: t('admin.confirmRevoke', { name: user.name }), danger: true })) &&
                 run(async () => {
                   await revokeKeys(user.id);
                   setShown(null);
@@ -160,8 +162,13 @@ function UserRow({
             <button
               className="sm danger"
               disabled={busy}
-              onClick={() =>
-                confirm(t('admin.confirmRemove', { name: user.name, n: count ?? '?' })) && run(() => removeUser(user.id))
+              onClick={async () =>
+                (await dialogs.confirm({
+                  title: t('admin.remove'),
+                  message: t('admin.confirmRemove', { name: user.name, n: count ?? '?' }),
+                  confirmLabel: t('admin.remove'),
+                  danger: true,
+                })) && run(() => removeUser(user.id))
               }
             >
               {t('admin.remove')}
@@ -176,6 +183,7 @@ function UserRow({
 
 function KeyBox({ k }: { k: string }) {
   const t = useT();
+  const dialogs = useDialogs();
   const link = inviteLink(k);
   const [copied, setCopied] = useState(false);
   return (
@@ -187,7 +195,7 @@ function KeyBox({ k }: { k: string }) {
         onClick={() =>
           navigator.clipboard.writeText(link).then(
             () => setCopied(true),
-            () => prompt(t('admin.copyPrompt'), link),
+            () => dialogs.copy(t('admin.copyPrompt'), link),
           )
         }
       >

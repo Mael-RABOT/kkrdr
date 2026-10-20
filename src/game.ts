@@ -106,7 +106,7 @@ export function unlockedBadges(p: Omit<Player, 'badges' | 'xp' | 'level'>): Set<
   if (p.streak >= 3) b.add('streak3');
   if (p.streak >= 7) b.add('streak7');
   if (p.streak >= 30) b.add('streak30');
-  if (p.poops.some((x) => x.type === 4 && x.rating === 5)) b.add('perfect');
+  if (p.poops.some((x) => x.perfect)) b.add('perfect');
   if (hours.some((h) => h >= 4 && h < 7)) b.add('early');
   if (hours.some((h) => h >= 23 || h < 4)) b.add('night');
   if (PLACE_IDS.every((pl) => p.poops.some((x) => x.place === pl))) b.add('explorer');

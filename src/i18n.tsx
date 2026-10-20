@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { setFormatLang } from './format';
+import { readPref, writePref } from './prefs';
 
 export type Lang = 'en' | 'fr';
 
@@ -17,6 +18,25 @@ const en = {
   'common.reload': 'Reload',
   'common.newVersion': 'A new version is available.',
   'common.showMore': 'Show more',
+  'common.close': 'Close',
+  'common.cancel': 'Cancel',
+  'common.ok': 'OK',
+  'common.confirm': 'Confirm',
+  'common.error': 'Something went wrong',
+  'common.edit': 'Edit',
+
+  'install.button': 'Install',
+  'install.title': 'Install kkrdr',
+  'install.intro': 'Add kkrdr to your home screen to open it like an app.',
+  'install.step1': 'In Safari, tap the Share button (square with an arrow).',
+  'install.step2': 'Scroll down and tap “Add to Home Screen”.',
+  'install.step3': 'Tap “Add”. kkrdr is now on your home screen.',
+  'install.safari': 'On older iOS versions, this only works from Safari.',
+
+  'theme.label': 'Theme',
+  'theme.system': 'Theme: system',
+  'theme.light': 'Theme: light',
+  'theme.dark': 'Theme: dark',
 
   'tab.feed': 'Feed',
   'tab.top': 'Top',
@@ -36,13 +56,22 @@ const en = {
   'feed.title': 'Feed',
   'feed.empty': 'Nothing logged yet.',
   'feed.logFirst': 'Log the first one',
-  'feed.confirmDelete': 'Delete this entry?',
+  'feed.confirmDelete': 'Delete this entry? This cannot be undone.',
+  'feed.deleteTitle': 'Delete entry',
   'feed.weekLeader': 'Leading the week',
   'feed.upvote': 'Upvote',
   'feed.downvote': 'Downvote',
   'feed.min': '{n} min',
+  'feed.sortAt': 'Poop time',
+  'feed.sortPosted': 'Posted',
+  'feed.posted': 'posted {when}',
+  'feed.perfect': 'Perfect',
 
   'log.title': 'Log',
+  'log.editTitle': 'Edit',
+  'log.saveChanges': 'Save changes',
+  'log.notFound': 'Entry not found.',
+  'log.perfectYes': 'Yes, perfect',
   'log.when': 'When',
   'log.what': 'What',
   'log.where': 'Where',
@@ -61,6 +90,11 @@ const en = {
   'log.scorePreview': 'Score {score} / 10',
   'log.scaleIntro': 'Bristol stool scale. Type 4 scores best; each step away from it counts 25% less.',
   'log.factor': 'x{f}',
+  'log.perfect': 'Perfect',
+  'log.perfectHint': 'One piece, leaves no mark.',
+  'log.perfectConfirm': 'A Perfect poop comes out in one piece and leaves no mark at all. Was it really perfect?',
+  'log.perfectOn': 'Perfect! Counts as smooth, rated 5/5.',
+  'log.perfectUndo': 'Undo',
   'type.1.desc': 'Separate hard lumps',
   'type.2.desc': 'Sausage-shaped, lumpy',
   'type.3.desc': 'Sausage-shaped, cracks on the surface',
@@ -144,7 +178,7 @@ const en = {
   'admin.noKey': 'No key. Use New key.',
   'admin.copy': 'Copy invite link',
   'admin.copied': 'Link copied',
-  'admin.copyPrompt': 'Copy this link:',
+  'admin.copyPrompt': 'Copy this link',
   'admin.confirmNewKey': 'Give {name} a new key? The old one stops working.',
   'admin.confirmRevoke': "Revoke {name}'s key? They lose access until given a new one.",
   'admin.confirmRemove': 'Remove {name}? This deletes their key and all {n} entries. This cannot be undone.',
@@ -193,7 +227,7 @@ const en = {
   'badge.streak30.name': 'Unstoppable',
   'badge.streak30.desc': '30 days in a row',
   'badge.perfect.name': 'Perfection',
-  'badge.perfect.desc': 'A smooth one rated 5/5',
+  'badge.perfect.desc': 'Log a Perfect poop',
   'badge.early.name': 'Early bird',
   'badge.early.desc': 'Log one between 4:00 and 7:00',
   'badge.night.name': 'Night owl',
@@ -226,6 +260,25 @@ const fr: Record<Key, string> = {
   'common.reload': 'Recharger',
   'common.newVersion': 'Une nouvelle version est disponible.',
   'common.showMore': 'Voir plus',
+  'common.close': 'Fermer',
+  'common.cancel': 'Annuler',
+  'common.ok': 'OK',
+  'common.confirm': 'Confirmer',
+  'common.error': 'Un problème est survenu',
+  'common.edit': 'Modifier',
+
+  'install.button': 'Installer',
+  'install.title': 'Installer kkrdr',
+  'install.intro': 'Ajoute kkrdr à ton écran d’accueil pour l’ouvrir comme une app.',
+  'install.step1': 'Dans Safari, touche le bouton Partager (carré avec une flèche).',
+  'install.step2': 'Fais défiler et touche « Sur l’écran d’accueil ».',
+  'install.step3': 'Touche « Ajouter ». kkrdr est maintenant sur ton écran d’accueil.',
+  'install.safari': 'Sur les anciennes versions d’iOS, ça ne marche que depuis Safari.',
+
+  'theme.label': 'Thème',
+  'theme.system': 'Thème : système',
+  'theme.light': 'Thème : clair',
+  'theme.dark': 'Thème : sombre',
 
   'tab.feed': 'Fil',
   'tab.top': 'Top',
@@ -245,13 +298,22 @@ const fr: Record<Key, string> = {
   'feed.title': 'Fil',
   'feed.empty': 'Rien pour le moment.',
   'feed.logFirst': 'Noter le premier',
-  'feed.confirmDelete': 'Supprimer cette entrée ?',
+  'feed.confirmDelete': 'Supprimer cette entrée ? Action définitive.',
+  'feed.deleteTitle': 'Supprimer l’entrée',
   'feed.weekLeader': 'En tête de la semaine',
   'feed.upvote': 'Vote positif',
   'feed.downvote': 'Vote négatif',
   'feed.min': '{n} min',
+  'feed.sortAt': 'Heure du caca',
+  'feed.sortPosted': 'Publication',
+  'feed.posted': 'publié {when}',
+  'feed.perfect': 'Parfait',
 
   'log.title': 'Noter',
+  'log.editTitle': 'Modifier',
+  'log.saveChanges': 'Enregistrer',
+  'log.notFound': 'Entrée introuvable.',
+  'log.perfectYes': 'Oui, parfait',
   'log.when': 'Quand',
   'log.what': 'Quoi',
   'log.where': 'Où',
@@ -270,6 +332,11 @@ const fr: Record<Key, string> = {
   'log.scorePreview': 'Score {score} / 10',
   'log.scaleIntro': 'Échelle de Bristol. Le type 4 rapporte le plus ; chaque cran d’écart compte 25 % de moins.',
   'log.factor': 'x{f}',
+  'log.perfect': 'Parfait',
+  'log.perfectHint': 'D’un seul morceau, ne laisse aucune trace.',
+  'log.perfectConfirm': 'Un caca parfait sort d’un seul morceau et ne laisse aucune trace. Il était vraiment parfait ?',
+  'log.perfectOn': 'Parfait ! Compte comme lisse, noté 5/5.',
+  'log.perfectUndo': 'Annuler',
   'type.1.desc': 'Morceaux durs séparés',
   'type.2.desc': 'Forme allongée, grumeleuse',
   'type.3.desc': 'Forme allongée, craquelée en surface',
@@ -353,7 +420,7 @@ const fr: Record<Key, string> = {
   'admin.noKey': 'Pas de clé. Utilise Nouvelle clé.',
   'admin.copy': 'Copier le lien d’invitation',
   'admin.copied': 'Lien copié',
-  'admin.copyPrompt': 'Copie ce lien :',
+  'admin.copyPrompt': 'Copie ce lien',
   'admin.confirmNewKey': 'Donner une nouvelle clé à {name} ? L’ancienne ne marchera plus.',
   'admin.confirmRevoke': 'Révoquer la clé de {name} ? Plus d’accès tant qu’il n’en a pas de nouvelle.',
   'admin.confirmRemove': 'Supprimer {name} ? Sa clé et ses {n} entrées seront effacées. Action définitive.',
@@ -402,7 +469,7 @@ const fr: Record<Key, string> = {
   'badge.streak30.name': 'Inarrêtable',
   'badge.streak30.desc': '30 jours d’affilée',
   'badge.perfect.name': 'Perfection',
-  'badge.perfect.desc': 'Un lisse noté 5/5',
+  'badge.perfect.desc': 'Noter un caca parfait',
   'badge.early.name': 'Lève-tôt',
   'badge.early.desc': 'En noter un entre 4 h et 7 h',
   'badge.night.name': 'Oiseau de nuit',
@@ -421,14 +488,24 @@ const fr: Record<Key, string> = {
 
 const dicts: Record<Lang, Record<Key, string>> = { en, fr };
 
-function detect(): Lang {
-  try {
-    const saved = localStorage.getItem('lang');
-    if (saved === 'en' || saved === 'fr') return saved;
-  } catch {
-    // storage unavailable
+function saved(): Lang | null {
+  const l = readPref('lang');
+  return l === 'en' || l === 'fr' ? l : null;
+}
+
+/** First supported language in the browser's preference list. */
+function browserLang(): Lang {
+  const list = navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const l of list) {
+    const base = l?.toLowerCase().slice(0, 2);
+    if (base === 'fr' || base === 'en') return base;
   }
-  return navigator.language?.toLowerCase().startsWith('fr') ? 'fr' : 'en';
+  return 'en';
+}
+
+/** A language picked in the app wins; until then, follow the browser. */
+function detect(): Lang {
+  return saved() ?? browserLang();
 }
 
 export type T = (key: Key, params?: Record<string, string | number>) => string;
@@ -449,13 +526,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = lang;
   }, [lang]);
 
+  // Follow browser language changes while nothing was picked in the app.
+  useEffect(() => {
+    const onChange = () => {
+      if (!saved()) setLangState(browserLang());
+    };
+    window.addEventListener('languagechange', onChange);
+    return () => window.removeEventListener('languagechange', onChange);
+  }, []);
+
   const setLang = (l: Lang) => {
     setLangState(l);
-    try {
-      localStorage.setItem('lang', l);
-    } catch {
-      // storage unavailable
-    }
+    writePref('lang', l);
   };
 
   const t: T = (key, params) => {

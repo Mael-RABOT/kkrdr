@@ -1,5 +1,6 @@
 import { vote } from '../data';
 import { netVotes } from '../game';
+import { useDialogs } from '../dialogs';
 import { useT } from '../i18n';
 import { useSession } from '../session';
 import type { Poop } from '../types';
@@ -14,6 +15,7 @@ function Chevron({ up }: { up?: boolean }) {
 
 export default function VoteButtons({ poop }: { poop: Poop }) {
   const t = useT();
+  const dialogs = useDialogs();
   const { me } = useSession();
   const own = poop.userId === me?.id;
   const mine = me ? poop.votes?.[me.id] : undefined;
@@ -21,7 +23,7 @@ export default function VoteButtons({ poop }: { poop: Poop }) {
 
   function cast(v: 1 | -1) {
     if (!me || own) return;
-    vote(poop.id, me.id, mine === v ? null : v).catch((e) => alert(e instanceof Error ? e.message : String(e)));
+    vote(poop.id, me.id, mine === v ? null : v).catch((e) => dialogs.alert(e instanceof Error ? e.message : String(e)));
   }
 
   return (

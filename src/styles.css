@@ -22,8 +22,9 @@
   color-scheme: light;
 }
 
+/* Dark: follows the system unless a theme was picked (data-theme on <html>, see src/theme.tsx). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #1a1511;
     --surface: #241d17;
     --text: #f3ebe1;
@@ -43,6 +44,25 @@
   }
 }
 
+:root[data-theme='dark'] {
+  --bg: #1a1511;
+  --surface: #241d17;
+  --text: #f3ebe1;
+  --muted: #a8988a;
+  --border: #3a2f26;
+  --accent: #d9a46a;
+  --accent-2: #f0b856;
+  --accent-text: #1f170f;
+  --accent-soft: #33281f;
+  --amber-soft: #3b2e17;
+  --amber-text: #f0c47a;
+  --danger: #f08a7e;
+  --danger-soft: #3d2420;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
+  --shadow-lg: 0 4px 10px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -50,6 +70,7 @@
 html,
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font: 16px/1.45 'Nunito Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -303,8 +324,11 @@ button.link.danger {
 }
 
 .pill {
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--accent-soft);
@@ -457,6 +481,30 @@ button.link.danger {
   display: flex;
   flex-direction: column;
 }
+.form-col {
+  display: contents;
+}
+.form-when {
+  order: 1;
+}
+.form-what {
+  order: 2;
+}
+.form-where {
+  order: 3;
+}
+.form-extras {
+  order: 4;
+}
+.form-error {
+  order: 5;
+}
+.form .save-bar {
+  order: 6;
+}
+.form-footer {
+  order: 7;
+}
 .form .card {
   display: flex;
   flex-direction: column;
@@ -507,7 +555,8 @@ button.link.danger {
 }
 .tile-value {
   display: block;
-  font-size: 1.6rem;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.2rem, 5.5vw, 1.6rem);
   font-weight: 900;
   line-height: 1.1;
   color: var(--accent);
@@ -592,6 +641,8 @@ button.link.danger {
   color: var(--muted);
 }
 .lb-count {
+  flex: none;
+  white-space: nowrap;
   font-size: 1.3rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
@@ -645,11 +696,16 @@ button.link.danger {
 
 .hbar {
   display: grid;
-  grid-template-columns: 7.5rem 1fr 2rem;
+  grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr) 2rem;
   align-items: center;
   gap: 10px;
   font-size: 0.85rem;
   margin-bottom: 6px;
+}
+.hbar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .hbar-track {
   height: 10px;
@@ -793,6 +849,99 @@ button.link.danger {
 }
 .welcome-lang {
   margin-top: 20px;
+  justify-content: center;
+}
+.head-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.icon-switch,
+.install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.icon-switch {
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  justify-content: center;
+}
+.install-btn {
+  height: 24px;
+  padding: 0 10px;
+}
+.modal {
+  width: min(400px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 20px;
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+.modal[open] {
+  animation: modal-in 0.16s ease-out;
+}
+.modal::backdrop {
+  background: rgb(20 12 6 / 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+.modal h2 {
+  margin-bottom: 8px;
+}
+.modal-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.modal > input {
+  margin-top: 4px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+@media (max-width: 480px) {
+  .modal-actions button {
+    flex: 1;
+  }
+}
+button.danger-fill {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+button.gold {
+  background: linear-gradient(135deg, #f6cc5c, #d39b2a);
+  border-color: #d39b2a;
+  color: #fff;
+}
+.install-guide p {
+  margin: 0 0 12px;
+}
+.install-guide ol {
+  margin: 0 0 12px;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
 }
 
 /* ---- feed additions ---- */
@@ -802,18 +951,50 @@ button.link.danger {
   text-decoration: none;
 }
 .entry-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 800;
   color: var(--text);
   text-decoration: none;
 }
+.entry-time {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+.entry-time small {
+  font-size: 0.7rem;
+}
 .entry-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-top: 10px;
 }
+.entry-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
 .entry-foot .link {
-  margin: 0 0 0 auto;
+  margin: 0;
+}
+.link-btn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+}
+.form-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
 }
 .entry .link {
   margin-top: 0;
@@ -999,8 +1180,11 @@ button.link.danger {
   gap: 2px;
 }
 .hero-name {
-  font-size: 1.3rem;
+  font-size: clamp(1.05rem, 5vw, 1.3rem);
   font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .hero-tags {
   font-size: 0.85rem;
@@ -1014,10 +1198,11 @@ button.link.danger {
   line-height: 1.3;
 }
 .hero-score {
+  flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 7vw, 2rem);
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1098,7 +1283,7 @@ button.link.danger {
 }
 .hall-date {
   flex: none;
-  width: 5.2rem;
+  width: 4.6rem;
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--muted);
@@ -1285,4 +1470,214 @@ button.link.danger {
 }
 .type-picker .hint {
   margin-top: 4px;
+}
+
+/* ---- perfect ---- */
+
+.perfect-btn {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px dashed var(--gold);
+  background: color-mix(in srgb, var(--gold) 10%, var(--bg));
+  color: var(--amber-text);
+  white-space: normal;
+}
+.perfect-btn strong {
+  font-size: 1rem;
+  font-weight: 900;
+}
+.perfect-btn small {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.perfect-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px;
+  border-radius: 12px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(135deg, #f6cc5c, #d39b2a 60%, #b07a1c);
+  box-shadow: 0 4px 14px rgb(211 155 42 / 0.35);
+}
+.perfect-banner strong {
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+.perfect-banner span {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.perfect-banner button.link {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.entry.perfect {
+  border: 1.5px solid #e2b13f;
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgb(255 255 255 / 0.35), transparent 60%),
+    linear-gradient(140deg, color-mix(in srgb, #f6cc5c 45%, var(--surface)), color-mix(in srgb, #d39b2a 25%, var(--surface)));
+  box-shadow: 0 4px 16px rgb(211 155 42 / 0.3);
+}
+.entry.perfect .pill {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+.entry.perfect .pill.perfect {
+  background: linear-gradient(135deg, #f6cc5c, #d39b2a);
+  color: #fff;
+  font-weight: 900;
+}
+.entry.perfect .note,
+.entry.perfect .entry-top .muted {
+  color: color-mix(in srgb, var(--text) 70%, transparent);
+}
+
+/* ---- feed sort ---- */
+
+.feed {
+  margin-top: 14px;
+}
+
+/* ---- small phones ---- */
+
+@media (max-width: 400px) {
+  h1 {
+    font-size: 1.5rem;
+  }
+  .page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .card {
+    padding: 14px;
+  }
+  .entry {
+    gap: 10px;
+    padding: 12px;
+  }
+  .hero-body {
+    gap: 10px;
+  }
+  .hero-body .avatar {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .tiles {
+    gap: 8px;
+  }
+  .tile {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 340px) {
+  .tiles:not(.two) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tiles .tile:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---- wide screens ---- */
+
+.grid-2 > .card:first-child,
+.grid-2 > .hero:first-child {
+  margin-top: 12px;
+}
+
+@media (min-width: 768px) {
+  .page {
+    max-width: 1100px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (min-width: 900px) {
+  /* Cards side by side share the row height. */
+  .feed {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 14px;
+    align-items: stretch;
+  }
+  .feed .day {
+    grid-column: 1 / -1;
+  }
+  .feed .day:not(:first-child) {
+    padding-top: 10px;
+  }
+  .feed .entry {
+    margin-bottom: 14px;
+  }
+  .entry-body {
+    display: flex;
+    flex-direction: column;
+  }
+  .entry-foot {
+    margin-top: auto;
+    padding-top: 10px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: stretch;
+    margin-top: 14px;
+  }
+  .grid-2 > .card,
+  .grid-2 > .hero,
+  .grid-2 > .hero:first-child,
+  .grid-2 > .card:first-child {
+    margin: 0;
+  }
+  /* A card left alone on the last row takes the full width. */
+  .grid-2 > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .grid-2 > .hero {
+    display: flex;
+    flex-direction: column;
+  }
+  .grid-2 > .hero > .hero-body,
+  .grid-2 > .hero > .hero-empty {
+    margin-top: auto;
+    margin-bottom: auto;
+  }
+
+  /* Log form: What on the left, the rest on the right, both ending on the same line. */
+  .form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 14px;
+    align-items: stretch;
+  }
+  .form-col {
+    display: flex;
+    flex-direction: column;
+  }
+  .form-col > .card:last-child {
+    flex: 1;
+  }
+  .form-error,
+  .form .save-bar,
+  .form-footer {
+    grid-column: 1 / -1;
+  }
+  .form .save-bar {
+    max-width: 480px;
+    width: 100%;
+    justify-self: center;
+  }
 }

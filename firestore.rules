@@ -79,7 +79,7 @@ service cloud.firestore {
     function validPoop(d) {
       return d.keys().hasAll(['userId', 'at', 'type', 'size', 'place', 'createdAt'])
         && d.keys().hasOnly(['userId', 'at', 'type', 'size', 'place', 'placeNote',
-                             'duration', 'rating', 'note', 'createdAt', 'votes'])
+                             'duration', 'rating', 'note', 'createdAt', 'votes', 'perfect'])
         && d.at is timestamp
         && d.at <= request.time + duration.value(5, 'm')
         && d.type is int && d.type >= 1 && d.type <= 7
@@ -88,7 +88,9 @@ service cloud.firestore {
         && optString(d, 'placeNote', 60)
         && optString(d, 'note', 280)
         && optIntRange(d, 'duration', 0, 180)
-        && optIntRange(d, 'rating', 1, 5);
+        && optIntRange(d, 'rating', 1, 5)
+        // A Perfect is always smooth (type 4) rated 5.
+        && (!('perfect' in d) || (d.perfect == true && d.type == 4 && d.rating == 5));
     }
 
     // votes is a map { userId: 1 | -1 }; a vote may only add, change or remove your own entry.

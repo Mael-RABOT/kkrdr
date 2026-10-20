@@ -22,10 +22,15 @@ export interface Poop {
   rating?: number;
   note?: string;
   votes?: Record<string, 1 | -1>;
+  /** One piece, leaves no mark. Always type 4 rated 5. */
+  perfect?: boolean;
+  /** When it was posted (server time). */
+  createdAt?: Date;
 }
 
-export interface PoopDoc extends Omit<Poop, 'id' | 'at'> {
+export interface PoopDoc extends Omit<Poop, 'id' | 'at' | 'createdAt'> {
   at: Timestamp;
+  createdAt?: Timestamp | null;
 }
 
 export const TYPE_IDS = [1, 2, 3, 4, 5, 6, 7] as const;

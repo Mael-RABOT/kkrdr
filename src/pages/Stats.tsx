@@ -57,93 +57,95 @@ export default function Stats() {
             </div>
           </div>
 
-          <section className="card">
-            <h2>{t('stats.leaderboard')}</h2>
-            <p className="hint card-sub">{t('stats.lbHint')}</p>
-            {s.ranking.length === 0 ? (
-              <p className="muted">{t('stats.noEntries')}</p>
-            ) : (
-              <ol className="lb">
-                {s.ranking.map((r, i) => (
-                  <li key={r.userId} className={r.userId === me?.id ? 'me' : ''}>
-                    <span className={`rank r${i + 1}`}>{i + 1}</span>
-                    <Avatar id={r.userId} name={users.get(r.userId)?.name} size={34} />
-                    <Link to={`/u/${r.userId}`} className="lb-main">
-                      <span className="lb-name">{name(r.userId)}</span>
-                      <span className="lb-sub">{t('stats.rowSub', { count: r.count, avg: fmt(r.avgScore) })}</span>
-                    </Link>
-                    <span className="lb-count">
-                      {fmtPts(r.points)}
-                      <small> {t('common.points')}</small>
-                    </span>
-                  </li>
-                ))}
-              </ol>
+          <div className="grid-2">
+            <section className="card">
+              <h2>{t('stats.leaderboard')}</h2>
+              <p className="hint card-sub">{t('stats.lbHint')}</p>
+              {s.ranking.length === 0 ? (
+                <p className="muted">{t('stats.noEntries')}</p>
+              ) : (
+                <ol className="lb">
+                  {s.ranking.map((r, i) => (
+                    <li key={r.userId} className={r.userId === me?.id ? 'me' : ''}>
+                      <span className={`rank r${i + 1}`}>{i + 1}</span>
+                      <Avatar id={r.userId} name={users.get(r.userId)?.name} size={34} />
+                      <Link to={`/u/${r.userId}`} className="lb-main">
+                        <span className="lb-name">{name(r.userId)}</span>
+                        <span className="lb-sub">{t('stats.rowSub', { count: r.count, avg: fmt(r.avgScore) })}</span>
+                      </Link>
+                      <span className="lb-count">
+                        {fmtPts(r.points)}
+                        <small> {t('common.points')}</small>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+
+            <section className="card">
+              <h2>{t('stats.you')}</h2>
+              <dl className="kv">
+                <dt>{t('stats.points')}</dt>
+                <dd>{fmtPts(mine?.points ?? 0)}</dd>
+                <dt>{t('stats.avgScore')}</dt>
+                <dd>{fmt(mine?.avgScore ?? null)}</dd>
+                <dt>{t('stats.total')}</dt>
+                <dd>{mine?.count ?? 0}</dd>
+                <dt>{t('stats.perDay')}</dt>
+                <dd>{fmt(mine?.perDay ?? 0)}</dd>
+                <dt>{t('stats.longestStreak')}</dt>
+                <dd>{t('common.days', { n: mine?.longestStreak ?? 0 })}</dd>
+                <dt>{t('stats.mostInDay')}</dt>
+                <dd>{mine?.maxInDay ?? 0}</dd>
+              </dl>
+            </section>
+
+            {s.total > 0 && (
+              <>
+                <section className="card">
+                  <h2>{t('stats.records')}</h2>
+                  <div className="tiles two">
+                    <Record wide label={t('stats.bestPoop')} value={s.best && fmtNum(score(s.best))} who={s.best && name(s.best.userId)} />
+                    <Record label={t('stats.longestStreak')} value={s.streak && t('common.days', { n: s.streak.days })} who={s.streak && name(s.streak.userId)} />
+                    <Record label={t('stats.mostInDay')} value={s.busiestDay && String(s.busiestDay.count)} who={s.busiestDay && name(s.busiestDay.userId)} />
+                    <Record label={t('stats.earliest')} value={s.earliest && timeOfDay(s.earliest.at)} who={s.earliest && name(s.earliest.userId)} />
+                    <Record label={t('stats.latest')} value={s.latest && timeOfDay(s.latest.at)} who={s.latest && name(s.latest.userId)} />
+                  </div>
+                </section>
+
+                <section className="card">
+                  <h2>{t('stats.byHour')}</h2>
+                  <BarChart data={s.hours.map((v, h) => ({ label: h % 6 === 0 ? `${h}h` : '', value: v }))} />
+                </section>
+
+                <section className="card">
+                  <h2>{t('stats.group')}</h2>
+                  <dl className="kv">
+                    <dt>{t('stats.avgRating')}</dt>
+                    <dd>{fmt(s.avgRating)}</dd>
+                    <dt>{t('stats.avgDuration')}</dt>
+                    <dd>{s.avgDuration == null ? '–' : t('feed.min', { n: fmt(s.avgDuration) })}</dd>
+                  </dl>
+                  <Breakdown
+                    title={t('log.type')}
+                    rows={TYPE_IDS.map((n) => [`${n} · ${t(`type.${n}` as Key)}`, s.types[n]])}
+                    total={s.total}
+                  />
+                  <Breakdown
+                    title={t('log.size')}
+                    rows={SIZE_IDS.map((k) => [t(`size.${k}` as Key), s.sizes[k] ?? 0])}
+                    total={s.total}
+                  />
+                  <Breakdown
+                    title={t('log.where')}
+                    rows={PLACE_IDS.map((k) => [t(`place.${k}` as Key), s.places[k] ?? 0])}
+                    total={s.total}
+                  />
+                </section>
+              </>
             )}
-          </section>
-
-          <section className="card">
-            <h2>{t('stats.you')}</h2>
-            <dl className="kv">
-              <dt>{t('stats.points')}</dt>
-              <dd>{fmtPts(mine?.points ?? 0)}</dd>
-              <dt>{t('stats.avgScore')}</dt>
-              <dd>{fmt(mine?.avgScore ?? null)}</dd>
-              <dt>{t('stats.total')}</dt>
-              <dd>{mine?.count ?? 0}</dd>
-              <dt>{t('stats.perDay')}</dt>
-              <dd>{fmt(mine?.perDay ?? 0)}</dd>
-              <dt>{t('stats.longestStreak')}</dt>
-              <dd>{t('common.days', { n: mine?.longestStreak ?? 0 })}</dd>
-              <dt>{t('stats.mostInDay')}</dt>
-              <dd>{mine?.maxInDay ?? 0}</dd>
-            </dl>
-          </section>
-
-          {s.total > 0 && (
-            <>
-              <section className="card">
-                <h2>{t('stats.records')}</h2>
-                <div className="tiles two">
-                  <Record wide label={t('stats.bestPoop')} value={s.best && fmtNum(score(s.best))} who={s.best && name(s.best.userId)} />
-                  <Record label={t('stats.longestStreak')} value={s.streak && t('common.days', { n: s.streak.days })} who={s.streak && name(s.streak.userId)} />
-                  <Record label={t('stats.mostInDay')} value={s.busiestDay && String(s.busiestDay.count)} who={s.busiestDay && name(s.busiestDay.userId)} />
-                  <Record label={t('stats.earliest')} value={s.earliest && timeOfDay(s.earliest.at)} who={s.earliest && name(s.earliest.userId)} />
-                  <Record label={t('stats.latest')} value={s.latest && timeOfDay(s.latest.at)} who={s.latest && name(s.latest.userId)} />
-                </div>
-              </section>
-
-              <section className="card">
-                <h2>{t('stats.byHour')}</h2>
-                <BarChart data={s.hours.map((v, h) => ({ label: h % 6 === 0 ? `${h}h` : '', value: v }))} />
-              </section>
-
-              <section className="card">
-                <h2>{t('stats.group')}</h2>
-                <dl className="kv">
-                  <dt>{t('stats.avgRating')}</dt>
-                  <dd>{fmt(s.avgRating)}</dd>
-                  <dt>{t('stats.avgDuration')}</dt>
-                  <dd>{s.avgDuration == null ? '–' : t('feed.min', { n: fmt(s.avgDuration) })}</dd>
-                </dl>
-                <Breakdown
-                  title={t('log.type')}
-                  rows={TYPE_IDS.map((n) => [`${n} · ${t(`type.${n}` as Key)}`, s.types[n]])}
-                  total={s.total}
-                />
-                <Breakdown
-                  title={t('log.size')}
-                  rows={SIZE_IDS.map((k) => [t(`size.${k}` as Key), s.sizes[k] ?? 0])}
-                  total={s.total}
-                />
-                <Breakdown
-                  title={t('log.where')}
-                  rows={PLACE_IDS.map((k) => [t(`place.${k}` as Key), s.places[k] ?? 0])}
-                  total={s.total}
-                />
-              </section>
-            </>
-          )}
+          </div>
         </>
       )}
     </>

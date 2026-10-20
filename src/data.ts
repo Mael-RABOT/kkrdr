@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getCountFromServer,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
@@ -12,6 +13,7 @@ import {
   Timestamp,
   where,
   writeBatch,
+  type DocumentSnapshot,
   addDoc,
   updateDoc,
   deleteField,
@@ -21,16 +23,36 @@ import type { Poop, PoopDoc } from './types';
 
 const poops = collection(db, 'poops');
 
-function toPoop(id: string, d: PoopDoc): Poop {
-  return { ...d, id, at: d.at.toDate() };
+function toPoop(snap: DocumentSnapshot): Poop {
+  // 'estimate' gives entries still waiting for the server a local createdAt.
+  const d = snap.data({ serverTimestamps: 'estimate' }) as PoopDoc;
+  return { ...d, id: snap.id, at: d.at.toDate(), createdAt: d.createdAt?.toDate() };
 }
 
-export type NewPoop = Omit<Poop, 'id' | 'userId'>;
+export type NewPoop = Omit<Poop, 'id' | 'userId' | 'createdAt'>;
+
+/** Feed order: when it happened, or when it was posted. */
+export type FeedSort = 'at' | 'createdAt';
 
 export function addPoop(userId: string, p: NewPoop) {
   const data: Record<string, unknown> = { ...p, userId, at: Timestamp.fromDate(p.at), createdAt: serverTimestamp() };
   for (const k of Object.keys(data)) if (data[k] === undefined || data[k] === '') delete data[k];
   return addDoc(poops, data);
+}
+
+const OPTIONAL = ['placeNote', 'duration', 'rating', 'note', 'perfect'] as const;
+
+/** Owner edit: every field is rewritten, empty optional ones removed. Votes, author and createdAt stay. */
+export function updatePoop(id: string, p: NewPoop) {
+  const data: Record<string, unknown> = { at: Timestamp.fromDate(p.at), type: p.type, size: p.size, place: p.place };
+  for (const k of OPTIONAL) data[k] = p[k] === undefined || p[k] === '' ? deleteField() : p[k];
+  return updateDoc(doc(poops, id), data);
+}
+
+/** One entry, or null if it does not exist (served from the local cache when offline). */
+export async function getPoop(id: string): Promise<Poop | null> {
+  const snap = await getDoc(doc(poops, id));
+  return snap.exists() ? toPoop(snap) : null;
 }
 
 export function deletePoop(id: string) {
@@ -40,16 +62,16 @@ export function deletePoop(id: string) {
 export function subscribeAll(cb: (p: Poop[]) => void, onError: (e: Error) => void) {
   return onSnapshot(
     query(poops, orderBy('at', 'desc')),
-    (snap) => cb(snap.docs.map((d) => toPoop(d.id, d.data() as PoopDoc))),
+    (snap) => cb(snap.docs.map(toPoop)),
     onError,
   );
 }
 
-/** The newest n entries, live. */
-export function subscribeRecent(n: number, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
+/** The newest n entries by the given field, live. */
+export function subscribeRecent(n: number, sort: FeedSort, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
   return onSnapshot(
-    query(poops, orderBy('at', 'desc'), limit(n)),
-    (snap) => cb(snap.docs.map((d) => toPoop(d.id, d.data() as PoopDoc))),
+    query(poops, orderBy(sort, 'desc'), limit(n)),
+    (snap) => cb(snap.docs.map(toPoop)),
     onError,
   );
 }
@@ -58,7 +80,7 @@ export function subscribeRecent(n: number, cb: (p: Poop[]) => void, onError: (e:
 export function subscribeSince(since: Date, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
   return onSnapshot(
     query(poops, where('at', '>=', Timestamp.fromDate(since))),
-    (snap) => cb(snap.docs.map((d) => toPoop(d.id, d.data() as PoopDoc))),
+    (snap) => cb(snap.docs.map(toPoop)),
     onError,
   );
 }

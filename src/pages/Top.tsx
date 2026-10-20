@@ -40,7 +40,7 @@ function HeroAward({ award, title, period }: { award: Award | undefined; title: 
             <strong className="hero-name">{name}</strong>
             <span className="hero-tags">{t('admin.logged', { n: award.count })}</span>
             <span className="hero-note">
-              {t('top.bestPoop', { type: t(`type.${p.type}` as Key), score: fmtNum(score(p)) })}
+              {t('top.bestPoop', { type: p.perfect ? t('feed.perfect') : t(`type.${p.type}` as Key), score: fmtNum(score(p)) })}
               {netVotes(p) !== 0 && ` · ${netVotes(p) > 0 ? '+' : ''}${netVotes(p)}`}
             </span>
           </span>
@@ -101,12 +101,14 @@ export default function Top() {
 
       {poops && (
         <>
-          <HeroAward
-            award={thisWeek}
-            title={t('top.week')}
-            period={`${t('top.running')} · ${shortDate(weekStart(now))} – ${shortDate(weekEnd)}`}
-          />
-          <HeroAward award={thisMonth} title={t('top.month')} period={`${t('top.running')} · ${monthLabel(monthStart(now))}`} />
+          <div className="grid-2">
+            <HeroAward
+              award={thisWeek}
+              title={t('top.week')}
+              period={`${t('top.running')} · ${shortDate(weekStart(now))} – ${shortDate(weekEnd)}`}
+            />
+            <HeroAward award={thisMonth} title={t('top.month')} period={`${t('top.running')} · ${monthLabel(monthStart(now))}`} />
+          </div>
 
           {(pastWeeks[0] || pastMonths[0]) && (
             <div className="tiles two awards-last">

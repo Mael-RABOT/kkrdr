@@ -72,6 +72,25 @@ describe('as a regular user', () => {
     await assertFails(setDoc(doc(db('dev1'), 'poops/x'), poop('bob', { note: 'x'.repeat(281) })));
     await assertSucceeds(setDoc(doc(db('dev1'), 'poops/x'), poop('bob', { rating: 5, duration: 3, note: 'ok' })));
   });
+  it('accepts a Perfect only as type 4 rated 5', async () => {
+    await assertSucceeds(setDoc(doc(db('dev1'), 'poops/p1'), poop('bob', { type: 4, rating: 5, perfect: true })));
+    await assertFails(setDoc(doc(db('dev1'), 'poops/p2'), poop('bob', { type: 3, rating: 5, perfect: true })));
+    await assertFails(setDoc(doc(db('dev1'), 'poops/p3'), poop('bob', { type: 4, perfect: true })));
+    await assertFails(setDoc(doc(db('dev1'), 'poops/p4'), poop('bob', { type: 4, rating: 5, perfect: false })));
+  });
+  it('can edit own poop, keeping votes, and remove optional fields', async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'poops/b5'), {
+        userId: 'bob', at: Timestamp.now(), type: 4, rating: 5, perfect: true, size: 'M', place: 'home',
+        note: 'wow', votes: { alice: 1 }, createdAt: Timestamp.now(),
+      }),
+    );
+    const ref = doc(db('dev1'), 'poops/b5');
+    await assertSucceeds(updateDoc(ref, { type: 3, rating: 4, perfect: deleteField(), note: deleteField(), size: 'L' }));
+    await assertFails(updateDoc(ref, { perfect: true })); // type 3 cannot be perfect
+    await assertFails(updateDoc(ref, { votes: {} }));
+    await assertFails(updateDoc(doc(db('dev1'), 'poops/a1'), { size: 'S' }));
+  });
   it('can delete only own poops', async () => {
     await assertFails(deleteDoc(doc(db('dev1'), 'poops/a1')));
     await setDoc(doc(db('dev1'), 'poops/b1'), poop('bob'));

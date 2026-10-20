@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import InstallButton from '../components/InstallButton';
 import LangSwitch from '../components/LangSwitch';
+import ThemeSwitch from '../components/ThemeSwitch';
 import { useT, type Key } from '../i18n';
 import { useSession } from '../session';
 
@@ -64,7 +66,9 @@ export default function Welcome() {
           </button>
         </form>
         {(msg ?? error) && <p className="error">{t((msg ?? error) as Key)}</p>}
-        <div className="welcome-lang">
+        <div className="welcome-lang head-controls">
+          <InstallButton />
+          <ThemeSwitch />
           <LangSwitch />
         </div>
       </div>

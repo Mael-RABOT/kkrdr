@@ -3,11 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
 import ScorePill from '../components/ScorePill';
+import Segmented from '../components/Segmented';
 import VoteButtons from '../components/VoteButtons';
-import { deletePoop, subscribeRecent, subscribeSince } from '../data';
+import { deletePoop, subscribeRecent, subscribeSince, type FeedSort } from '../data';
 import { dayKey, dayLabel, fmtPts, relative } from '../format';
 import { awards, weekStart } from '../game';
+import { useDialogs } from '../dialogs';
 import { useT, type Key } from '../i18n';
+import { readPref, writePref } from '../prefs';
 import { useSession } from '../session';
 import type { Poop } from '../types';
 
@@ -15,7 +18,9 @@ const PAGE = 20;
 
 export default function Feed() {
   const t = useT();
+  const dialogs = useDialogs();
   const { me, users } = useSession();
+  const [sort, setSortState] = useState<FeedSort>(() => (readPref('feedSort') === 'createdAt' ? 'createdAt' : 'at'));
   const [limit, setLimit] = useState(PAGE);
   const [poops, setPoops] = useState<Poop[] | null>(null);
   const [week, setWeek] = useState<Poop[] | null>(null);
@@ -25,7 +30,7 @@ export default function Feed() {
   const sentinel = useRef<HTMLDivElement>(null);
 
   // Newest `limit` entries; the limit grows as you scroll (already loaded ones come from the local cache).
-  useEffect(() => subscribeRecent(limit, setPoops, (e) => setError(e.message)), [limit]);
+  useEffect(() => subscribeRecent(limit, sort, setPoops, (e) => setError(e.message)), [limit, sort]);
   // This week's entries, for the leader banner.
   useEffect(() => subscribeSince(weekStart(new Date()), setWeek, () => {}), []);
 
@@ -53,9 +58,23 @@ export default function Feed() {
 
   const leader = useMemo(() => (week?.length ? awards(week, 'week')[0] : undefined), [week]);
 
-  function remove(p: Poop) {
-    if (!confirm(t('feed.confirmDelete'))) return;
-    deletePoop(p.id).catch((e) => alert(e instanceof Error ? e.message : String(e)));
+  const sortOptions = [
+    { value: 'at' as const, label: t('feed.sortAt') },
+    { value: 'createdAt' as const, label: t('feed.sortPosted') },
+  ];
+
+  function setSort(v: FeedSort) {
+    if (v === sort) return;
+    setSortState(v);
+    writePref('feedSort', v);
+    setLimit(PAGE);
+    setPoops(null);
+  }
+
+  async function remove(p: Poop) {
+    const ok = await dialogs.confirm({ title: t('feed.deleteTitle'), message: t('feed.confirmDelete'), confirmLabel: t('common.delete'), danger: true });
+    if (!ok) return;
+    deletePoop(p.id).catch((e) => dialogs.alert(e instanceof Error ? e.message : String(e)));
   }
 
   let lastDay = '';
@@ -79,6 +98,8 @@ export default function Feed() {
         </Link>
       )}
 
+      <Segmented options={sortOptions} value={sort} onChange={(v) => v && setSort(v)} variant="pills" />
+
       {poops?.length === 0 && (
         <div className="card empty">
           <p className="muted">{t('feed.empty')}</p>
@@ -90,11 +111,13 @@ export default function Feed() {
 
       <ul className="feed">
         {poops?.map((p) => {
-          const k = dayKey(p.at);
+          // Day headers follow the sort field.
+          const when = sort === 'createdAt' ? (p.createdAt ?? p.at) : p.at;
+          const k = dayKey(when);
           const header =
             k !== lastDay ? (
               <li key={'day-' + k} className="day">
-                {dayLabel(p.at)}
+                {dayLabel(when)}
               </li>
             ) : null;
           lastDay = k;
@@ -103,7 +126,7 @@ export default function Feed() {
           const place = p.place === 'other' && p.placeNote ? p.placeNote : placeLabel + (p.placeNote ? ` · ${p.placeNote}` : '');
           return [
             header,
-            <li key={p.id} className="entry">
+            <li key={p.id} className={`entry${p.perfect ? ' perfect' : ''}`}>
               <Link to={`/u/${p.userId}`} className="entry-avatar">
                 <Avatar id={p.userId} name={name} />
               </Link>
@@ -112,23 +135,37 @@ export default function Feed() {
                   <Link to={`/u/${p.userId}`} className="entry-name">
                     {name ?? t('common.unknown')}
                   </Link>
-                  <span className="muted">{relative(p.at)}</span>
+                  <span className="entry-time muted">
+                    {relative(p.at)}
+                    {sort === 'createdAt' && p.createdAt && (
+                      <small>{t('feed.posted', { when: relative(p.createdAt) })}</small>
+                    )}
+                  </span>
                 </div>
                 <div className="tags">
-                  <span className="pill">{t(`type.${p.type}` as Key)}</span>
+                  {p.perfect ? (
+                    <span className="pill perfect">{t('feed.perfect')}</span>
+                  ) : (
+                    <span className="pill">{t(`type.${p.type}` as Key)}</span>
+                  )}
                   <span className="pill">{t(`size.${p.size}` as Key)}</span>
                   <span className="pill">{place}</span>
                   {p.duration != null && <span className="pill">{t('feed.min', { n: p.duration })}</span>}
-                  {p.rating != null && <span className="pill amber">{p.rating}/5</span>}
+                  {p.rating != null && !p.perfect && <span className="pill amber">{p.rating}/5</span>}
                 </div>
                 {p.note && <p className="note">{p.note}</p>}
                 <div className="entry-foot">
                   <ScorePill poop={p} />
                   <VoteButtons poop={p} />
                   {p.userId === me?.id && (
-                    <button className="link danger" onClick={() => remove(p)}>
-                      {t('common.delete')}
-                    </button>
+                    <span className="entry-actions">
+                      <Link to={`/edit/${p.id}`} className="link-btn">
+                        {t('common.edit')}
+                      </Link>
+                      <button className="link danger" onClick={() => remove(p)}>
+                        {t('common.delete')}
+                      </button>
+                    </span>
                   )}
                 </div>
               </div>
