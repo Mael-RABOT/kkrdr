@@ -4,6 +4,7 @@ import Avatar from '../components/Avatar';
 import BarChart from '../components/BarChart';
 import PageHead from '../components/PageHead';
 import Segmented from '../components/Segmented';
+import Timeline from '../components/Timeline';
 import { fmtNum, fmtPts, timeOfDay } from '../format';
 import { score } from '../game';
 import { useT, type Key } from '../i18n';
@@ -149,6 +150,13 @@ export default function Stats() {
               </>
             )}
           </div>
+
+          {s.total > 0 && (
+            <section className="card">
+              <h2>{t('stats.timeline')}</h2>
+              <Timeline poops={poops!} lanes={s.ranking.map((r) => r.userId)} />
+            </section>
+          )}
         </>
       )}
     </>

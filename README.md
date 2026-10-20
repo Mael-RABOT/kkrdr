@@ -1,6 +1,6 @@
 # kkrdr
 
-Pronounced [K][Car][D][Heure]
+Pronounced /ka.kaʁ.de.œʁ/ ("Ca Car D'heure", roughly "kah-kar-day-ur"), KKRDR gives you a precise log of you & your friends poops.
 
 ## How access works
 

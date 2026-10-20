@@ -1772,7 +1772,8 @@ img.avatar.blob,
 
 /* ---- profile timeline (git log style) ---- */
 
-.tl {
+.tl,
+.tl-heads {
   --tl-date: 6rem;
   --tl-x: calc(var(--tl-date) + 6px); /* rail position */
   list-style: none;
@@ -1908,8 +1909,82 @@ a.tl-entry:hover .tl-main strong {
   color: var(--muted);
 }
 
+/* Group view: one lane per person, like branches in git log --graph. */
+.tl-graph > li,
+.tl-heads {
+  grid-template-columns: var(--tl-date) var(--tl-lanes) minmax(0, 1fr);
+}
+.tl-graph > li::before {
+  display: none;
+}
+/* Day spacing goes inside the row so the lane lines stay unbroken. */
+.tl-graph > li.tl-first:not(:first-child) {
+  padding-top: 0;
+}
+.tl-graph > li.tl-first:not(:first-child) > .tl-entry {
+  padding-top: 16px;
+}
+.tl-graph > li.tl-first:not(:first-child) > .tl-date {
+  padding-top: 19px;
+}
+.tl-lanes {
+  position: relative;
+  align-self: stretch;
+}
+.tl-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--border);
+  transform: translateX(-1px);
+}
+.tl-gap .tl-rail {
+  border-left-style: dashed;
+}
+.tl-graph .tl-node {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}
+/* First row of a day has extra space on top: keep the node centred on the text. */
+.tl-graph > li.tl-first:not(:first-child) .tl-node {
+  top: calc(50% + 5px);
+}
+.tl-graph .tl-entry {
+  padding-left: 10px;
+}
+.tl-graph .tl-gap-label {
+  padding-left: 10px;
+}
+.tl-who {
+  margin-right: 2px;
+}
+.tl-heads {
+  display: grid;
+  height: 50px;
+  margin-bottom: 2px;
+}
+.tl-head {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  display: grid;
+  border: 2px solid;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.tl-head.low {
+  top: 22px;
+}
+.tl-head .avatar {
+  display: block;
+  border-radius: 50%;
+}
+
 @media (max-width: 400px) {
-  .tl {
+  .tl,
+  .tl-heads {
     --tl-date: 4.4rem;
   }
   .tl-date {
@@ -1917,6 +1992,10 @@ a.tl-entry:hover .tl-main strong {
     letter-spacing: 0.02em;
   }
   .tl-line .muted {
+    display: none;
+  }
+  /* Group view: who and what matter more than the exact time. */
+  .tl-graph .tl-time {
     display: none;
   }
 }
