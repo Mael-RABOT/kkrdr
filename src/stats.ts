@@ -1,5 +1,5 @@
 import { dayKey, monthStart, startOfDay, weekStart } from './format';
-import { best, rankUsers, score } from './score';
+import { best, rankUsers, score, type TieBreak } from './score';
 import type { Place, Poop, Size } from './types';
 
 export type Period = 'week' | 'month' | 'all';
@@ -19,6 +19,9 @@ export interface UserStats {
   avgRating: number | null;
   points: number;
   avgScore: number;
+  /** Leaderboard position (shared only on a full tie). */
+  rank: number;
+  tie: TieBreak | null;
 }
 
 export interface Stats {
@@ -93,11 +96,14 @@ export function computeStats(poops: Poop[], start: Date | null, now = new Date()
       avgRating: avg(list.flatMap((p) => (p.rating != null ? [p.rating] : []))),
       points: list.reduce((a, p) => a + score(p), 0),
       avgScore: list.reduce((a, p) => a + score(p), 0) / list.length,
+      rank: 0,
+      tie: null,
     });
   }
-  // Same order as the week / month awards.
-  const order = rankUsers(poops).map((r) => r.userId);
-  ranking.sort((a, b) => order.indexOf(a.userId) - order.indexOf(b.userId));
+  // Same order and tie rules as the week / month awards.
+  const ranked = new Map(rankUsers(poops).map((r, i) => [r.userId, { ...r, i }]));
+  for (const r of ranking) Object.assign(r, { rank: ranked.get(r.userId)!.rank, tie: ranked.get(r.userId)!.tie });
+  ranking.sort((a, b) => ranked.get(a.userId)!.i - ranked.get(b.userId)!.i);
 
   const streakLeader = [...ranking].sort((a, b) => b.longestStreak - a.longestStreak)[0];
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { awards, baseScore, levelFor, players, score, textureFactor, weekStart } from './game';
+import { awards, baseScore, levelFor, players, rankUsers, score, textureFactor, weekStart } from './game';
 import type { Poop } from './types';
 
 let n = 0;
@@ -69,6 +69,42 @@ describe('awards', () => {
     expect(p.get('a')!.votesCast).toBe(1);
     // b: 2 poops (10+8, 10+6) + 3 upvotes*2 + badges(first, weekWin)*25 + 1 week win*50
     expect(p.get('b')!.xp).toBe(18 + 16 + 6 + 50 + 50);
+  });
+});
+
+describe('ties', () => {
+  const ranks = (list: Poop[]) => rankUsers(list).map((r) => [r.userId, r.rank, r.tie]);
+
+  it('breaks equal points by the better average, then the better best poop', () => {
+    const list = [
+      poop('a', '2026-10-13T08:00', { rating: 3 }), // 6
+      poop('a', '2026-10-13T09:00', { rating: 3 }), // 6 -> 12, avg 6, best 6
+      poop('b', '2026-10-13T10:00', { rating: 5 }), // 10
+      poop('b', '2026-10-13T11:00', { type: 7, rating: 4 }), // 2 -> 12, avg 6, best 10
+      poop('c', '2026-10-13T12:00', { rating: 4 }), // 8
+      poop('c', '2026-10-13T13:00', { rating: 1 }), // 2
+      poop('c', '2026-10-13T14:00', { rating: 1 }), // 2 -> 12, avg 4
+    ];
+    expect(ranks(list)).toEqual([
+      ['b', 1, null],
+      ['a', 2, 'best'],
+      ['c', 3, 'avg'],
+    ]);
+  });
+
+  it('then whoever reached the total first, and shares the rank only on a full tie', () => {
+    const list = [
+      poop('a', '2026-10-13T08:00', { rating: 4 }),
+      poop('b', '2026-10-13T09:00', { rating: 4 }),
+      poop('c', '2026-10-13T09:00', { rating: 4 }),
+      poop('d', '2026-10-13T07:00', { rating: 1 }),
+    ];
+    expect(ranks(list)).toEqual([
+      ['a', 1, null],
+      ['b', 2, 'first'],
+      ['c', 2, 'shared'],
+      ['d', 4, null],
+    ]);
   });
 });
 

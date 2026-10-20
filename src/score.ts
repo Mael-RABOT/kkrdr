@@ -32,17 +32,43 @@ export function best(poops: Poop[]): Poop | undefined {
   return top;
 }
 
+/** Why someone ranks below the person just above them despite equal points. */
+export type TieBreak = 'avg' | 'best' | 'first' | 'shared';
+
 export interface Ranked {
   userId: string;
   points: number;
   count: number;
+  /** Average score per poop. */
+  avg: number;
   poops: Poop[];
   best: Poop;
+  /** When their last poop of the set happened, i.e. when they reached their total. */
+  reachedAt: Date;
+  /** 1-based; equal only when every tie-break is equal too. */
+  rank: number;
+  /** Set when points equal the person above: the rule that put them below (or 'shared'). */
+  tie: TieBreak | null;
+}
+
+// Averages are fractions: compare them with a little slack.
+const EPS = 1e-9;
+const cmp = (a: number, b: number) => (Math.abs(a - b) < EPS ? 0 : a - b);
+
+/** Tie-breaks for equal points, in order: better average, better best poop, reached the total first. */
+function tieBreak(a: Omit<Ranked, 'rank' | 'tie'>, b: Omit<Ranked, 'rank' | 'tie'>): { order: number; rule: TieBreak } {
+  const byAvg = cmp(b.avg, a.avg);
+  if (byAvg) return { order: byAvg, rule: 'avg' };
+  const byBest = cmp(score(b.best), score(a.best));
+  if (byBest) return { order: byBest, rule: 'best' };
+  const byTime = a.reachedAt.getTime() - b.reachedAt.getTime();
+  if (byTime) return { order: byTime, rule: 'first' };
+  return { order: 0, rule: 'shared' };
 }
 
 /**
- * People ranked by total points over a set of entries: most points first, then most entries,
- * then best single poop. Used by both the leaderboard and the week / month awards.
+ * People ranked by total points over a set of entries; equal points are split by {@link tieBreak}.
+ * Used by the leaderboard and the week / month awards.
  */
 export function rankUsers(poops: Poop[]): Ranked[] {
   const byUser = new Map<string, Poop[]>();
@@ -50,16 +76,30 @@ export function rankUsers(poops: Poop[]): Ranked[] {
     if (!byUser.has(p.userId)) byUser.set(p.userId, []);
     byUser.get(p.userId)!.push(p);
   }
-  return [...byUser.entries()]
-    .map(([userId, list]) => ({
+  const rows = [...byUser.entries()].map(([userId, list]) => {
+    const points = list.reduce((a, p) => a + score(p), 0);
+    return {
       userId,
-      points: list.reduce((a, p) => a + score(p), 0),
+      points,
       count: list.length,
+      avg: points / list.length,
       poops: list,
       best: best(list)!,
-    }))
-    .sort(
-      (a, b) =>
-        b.points - a.points || b.count - a.count || score(b.best) - score(a.best) || a.userId.localeCompare(b.userId),
-    );
+      reachedAt: new Date(Math.max(...list.map((p) => p.at.getTime()))),
+    };
+  });
+  // Fully tied people keep a stable (but meaningless) order by id.
+  rows.sort((a, b) => cmp(b.points, a.points) || tieBreak(a, b).order || a.userId.localeCompare(b.userId));
+
+  const ranked: Ranked[] = [];
+  rows.forEach((r, i) => {
+    const above = ranked[i - 1];
+    if (!above || cmp(above.points, r.points) !== 0) {
+      ranked.push({ ...r, rank: i + 1, tie: null });
+      return;
+    }
+    const rule = tieBreak(above, r).rule;
+    ranked.push({ ...r, rank: rule === 'shared' ? above.rank : i + 1, tie: rule });
+  });
+  return ranked;
 }

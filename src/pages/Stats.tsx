@@ -54,7 +54,7 @@ export default function Stats() {
               <span className="tile-label">{t('stats.perDay')}</span>
             </div>
             <div className="tile">
-              <span className="tile-value">{myIndex >= 0 ? `#${myIndex + 1}` : '–'}</span>
+              <span className="tile-value">{mine ? `#${mine.rank}` : '–'}</span>
               <span className="tile-label">{t('stats.yourRank')}</span>
             </div>
           </div>
@@ -69,11 +69,12 @@ export default function Stats() {
                 <ol className="lb">
                   {s.ranking.map((r, i) => (
                     <li key={r.userId} className={r.userId === me?.id ? 'me' : ''}>
-                      <span className={`rank r${i + 1}`}>{i + 1}</span>
+                      <span className={`rank r${r.rank}`}>{r.rank}</span>
                       <Avatar id={r.userId} name={users.get(r.userId)?.name} size={34} />
                       <Link to={profilePath(r.userId)} className="lb-main">
                         <span className="lb-name">{name(r.userId)}</span>
                         <span className="lb-sub">{t('stats.rowSub', { count: r.count, avg: fmt(r.avgScore) })}</span>
+                        {r.tie && <span className="lb-tie">{t(`stats.tie.${r.tie}`, { name: name(s.ranking[i - 1].userId) })}</span>}
                       </Link>
                       <span className="lb-count">
                         {fmtPts(r.points)}

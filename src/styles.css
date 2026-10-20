@@ -646,6 +646,12 @@ button.link.danger {
   font-size: 0.78rem;
   color: var(--muted);
 }
+.lb-tie {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--amber-text);
+}
 .lb-count {
   flex: none;
   white-space: nowrap;
