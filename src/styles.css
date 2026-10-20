@@ -1806,7 +1806,7 @@ img.avatar.blob,
   border-left-style: dashed;
 }
 /* A new day: a little space above its first row. */
-.tl > li.tl-first:not(:first-child) {
+.tl > li.tl-later {
   padding-top: 10px;
 }
 .tl-date {
@@ -1909,7 +1909,13 @@ a.tl-entry:hover .tl-main strong {
   color: var(--muted);
 }
 
-/* Group view: one lane per person, like branches in git log --graph. */
+/* Group view: one lane per person, like branches in git log --graph.
+   Timeline.tsx sets --n (lane count) on the list and --i (lane index) on rails, nodes and heads. */
+.tl-graph,
+.tl-heads {
+  --lane: 16px;
+  --tl-lanes: calc(var(--n) * var(--lane));
+}
 .tl-graph > li,
 .tl-heads {
   grid-template-columns: var(--tl-date) var(--tl-lanes) minmax(0, 1fr);
@@ -1918,18 +1924,27 @@ a.tl-entry:hover .tl-main strong {
   display: none;
 }
 /* Day spacing goes inside the row so the lane lines stay unbroken. */
-.tl-graph > li.tl-first:not(:first-child) {
+.tl-graph > li.tl-later {
   padding-top: 0;
 }
-.tl-graph > li.tl-first:not(:first-child) > .tl-entry {
+.tl-graph > li.tl-later > .tl-entry {
   padding-top: 16px;
 }
-.tl-graph > li.tl-first:not(:first-child) > .tl-date {
+.tl-graph > li.tl-later > .tl-date {
   padding-top: 19px;
+}
+/* Date rows are for phones only (see below). */
+.tl-graph > li.tl-day {
+  display: none;
 }
 .tl-lanes {
   position: relative;
   align-self: stretch;
+}
+.tl-rail,
+.tl-graph .tl-node,
+.tl-head {
+  left: calc(var(--i) * var(--lane) + var(--lane) / 2);
 }
 .tl-rail {
   position: absolute;
@@ -1948,8 +1963,8 @@ a.tl-entry:hover .tl-main strong {
   margin: 0;
 }
 /* First row of a day has extra space on top: keep the node centred on the text. */
-.tl-graph > li.tl-first:not(:first-child) .tl-node {
-  top: calc(50% + 5px);
+.tl-graph > li.tl-later .tl-node {
+  top: calc(50% + 8px);
 }
 .tl-graph .tl-entry {
   padding-left: 10px;
@@ -1957,8 +1972,24 @@ a.tl-entry:hover .tl-main strong {
 .tl-graph .tl-gap-label {
   padding-left: 10px;
 }
-.tl-who {
-  margin-right: 2px;
+/* One line: time, name, type, details (the details are cut first). */
+.tl-graph .tl-line {
+  display: flex;
+  align-items: baseline;
+  column-gap: 6px;
+}
+.tl-graph .tl-time {
+  order: -1;
+  margin: 0;
+}
+.tl-graph .tl-who,
+.tl-graph .tl-what {
+  flex: none;
+}
+.tl-graph .tl-details {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tl-heads {
   display: grid;
@@ -1991,11 +2022,78 @@ a.tl-entry:hover .tl-main strong {
     font-size: 0.64rem;
     letter-spacing: 0.02em;
   }
-  .tl-line .muted {
+  .tl:not(.tl-graph) .tl-line .muted {
     display: none;
   }
-  /* Group view: who and what matter more than the exact time. */
-  .tl-graph .tl-time {
+}
+
+/* Group view on phones: dates on their own rows, narrower lanes, and rows that wrap instead of being cut. */
+@media (max-width: 480px) {
+  .tl-graph,
+  .tl-heads {
+    --lane: 12px;
+  }
+  .tl-graph > li,
+  .tl-heads {
+    grid-template-columns: var(--tl-lanes) minmax(0, 1fr);
+  }
+  .tl-graph .tl-date,
+  .tl-heads .tl-date {
     display: none;
+  }
+  .tl-graph > li.tl-day {
+    display: grid;
+  }
+  .tl-day-label {
+    padding: 14px 0 2px 10px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .tl-graph > li.tl-day:first-child .tl-day-label {
+    padding-top: 2px;
+  }
+  .tl-graph > li.tl-later > .tl-entry {
+    padding-top: 6px;
+  }
+  .tl-graph > li.tl-later .tl-node {
+    top: calc(50% + 3px);
+  }
+  /* Line 1: the name. Line 2: time and type. Line 3: details, wrapping instead of being cut. */
+  .tl-graph .tl-line {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .tl-graph .tl-who {
+    order: -2;
+    flex: 0 0 100%;
+    overflow-wrap: anywhere;
+  }
+  .tl-graph .tl-sep {
+    display: none;
+  }
+  .tl-graph .tl-details {
+    flex: 0 0 100%;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+  .tl-graph .tl-note {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .tl-head .avatar {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .tl-heads {
+    height: 44px;
+  }
+  .tl-head.low {
+    top: 20px;
   }
 }

@@ -11,8 +11,6 @@ import Avatar from './Avatar';
 import ScorePill from './ScorePill';
 
 const PAGE = 14;
-/** Width of one person's lane in the group view, in px. */
-const LANE = 16;
 /** Lane colours, readable on both themes. */
 const LANE_COLORS = ['#c0703f', '#3f7fbf', '#5f8a6b', '#c0577f', '#d39b2a', '#7a6aa3', '#b5574b', '#2f9c9c', '#8a6f4e', '#6b8e23'];
 
@@ -35,10 +33,8 @@ export default function Timeline({ poops, lanes }: Props) {
   if (items.length === 0) return <p className="muted">{t('profile.noneYet')}</p>;
 
   const laneOf = new Map(lanes?.map((id, i) => [id, i]));
-  const graph = lanes && (
-    // Pass the lane layout to CSS: width of the lane column.
-    { '--tl-lanes': `${lanes.length * LANE}px` } as CSSProperties
-  );
+  // Lane geometry lives in CSS (lanes are narrower on phones): pass the lane count.
+  const graph = lanes && ({ '--n': lanes.length } as CSSProperties);
 
   return (
     <>
@@ -48,7 +44,7 @@ export default function Timeline({ poops, lanes }: Props) {
           <span className="tl-lanes">
             {lanes.map((id, i) => (
               // Staggered on two rows so neighbours don't overlap.
-              <span key={id} className={`tl-head${i % 2 ? ' low' : ''}`} style={{ left: i * LANE + LANE / 2, borderColor: laneColor(i) }} title={users.get(id)?.name}>
+              <span key={id} className={`tl-head${i % 2 ? ' low' : ''}`} style={laneStyle(i, { borderColor: laneColor(i) })} title={users.get(id)?.name}>
                 <Avatar id={id} name={users.get(id)?.name} size={22} />
               </span>
             ))}
@@ -68,21 +64,33 @@ export default function Timeline({ poops, lanes }: Props) {
               <span className="tl-gap-label">{t('profile.daysOff', { n: item.days })}</span>
             </li>
           ) : (
-            item.poops.map((p, i) => {
-              const lane = laneOf.get(p.userId) ?? 0;
-              return (
-                <li key={p.id} className={`tl-row${i === 0 ? ' tl-first' : ''}`}>
-                  <span className="tl-date">{i === 0 && compactDay(item.date)}</span>
-                  {lanes && (
-                    <span className="tl-lanes">
-                      <Rails count={lanes.length} />
-                      <Node poop={p} style={{ left: lane * LANE + LANE / 2, background: p.perfect ? undefined : laneColor(lane) }} />
-                    </span>
-                  )}
-                  <Entry poop={p} nameColor={lanes ? laneColor(lane) : undefined} />
+            [
+              // Group view on phones: the date gets a row of its own (hidden on wider screens).
+              lanes && (
+                <li key={`day-${idx}`} className="tl-day">
+                  <span className="tl-lanes">
+                    <Rails count={lanes.length} />
+                  </span>
+                  <span className="tl-day-label">{compactDay(item.date)}</span>
                 </li>
-              );
-            })
+              ),
+              ...item.poops.map((p, i) => {
+                const lane = laneOf.get(p.userId) ?? 0;
+                // tl-later: first row of a day after the first one, which gets some space above.
+                return (
+                  <li key={p.id} className={`tl-row${i === 0 ? ' tl-first' : ''}${i === 0 && idx > 0 ? ' tl-later' : ''}`}>
+                    <span className="tl-date">{i === 0 && compactDay(item.date)}</span>
+                    {lanes && (
+                      <span className="tl-lanes">
+                        <Rails count={lanes.length} />
+                        <Node poop={p} style={laneStyle(lane, { background: p.perfect ? undefined : laneColor(lane) })} />
+                      </span>
+                    )}
+                    <Entry poop={p} nameColor={lanes ? laneColor(lane) : undefined} />
+                  </li>
+                );
+              }),
+            ]
           ),
         )}
       </ol>
@@ -96,13 +104,15 @@ export default function Timeline({ poops, lanes }: Props) {
 }
 
 const laneColor = (i: number) => LANE_COLORS[i % LANE_COLORS.length];
+/** Places an element on lane i (see .tl-graph in styles.css). */
+const laneStyle = (i: number, extra?: CSSProperties) => ({ '--i': i, ...extra }) as CSSProperties;
 
 /** The vertical line of every lane through one row. */
 function Rails({ count }: { count: number }) {
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
-        <i key={i} className="tl-rail" style={{ left: i * LANE + LANE / 2 }} />
+        <i key={i} className="tl-rail" style={laneStyle(i)} />
       ))}
     </>
   );
@@ -123,16 +133,17 @@ function Entry({ poop: p, nameColor }: { poop: Poop; nameColor?: string }) {
     <>
       {!showName && <Node poop={p} />}
       <span className="tl-main">
+        {/* Group view: CSS shows time first on wide screens, the name on a line of its own on phones. */}
         <span className="tl-line">
-          <span className="tl-time num">{timeOfDay(p.at)}</span>
           {showName && (
             <strong className="tl-who" style={{ color: nameColor }}>
-              {users.get(p.userId)?.name ?? t('common.unknown')}{' '}
+              {users.get(p.userId)?.name ?? t('common.unknown')}
             </strong>
           )}
-          <strong>{p.perfect ? t('feed.perfect') : t(`type.${p.type}` as Key)}</strong>
-          <span className="muted">
-            {' · '}
+          <span className="tl-time num">{timeOfDay(p.at)}</span>
+          <strong className="tl-what">{p.perfect ? t('feed.perfect') : t(`type.${p.type}` as Key)}</strong>
+          <span className="muted tl-details">
+            <span className="tl-sep">{' · '}</span>
             {t(`size.${p.size}` as Key)} · {p.place === 'other' && p.placeNote ? p.placeNote : t(`place.${p.place}` as Key)}
           </span>
         </span>
