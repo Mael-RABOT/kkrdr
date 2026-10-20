@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
+import PoopDetail, { placeText } from '../components/PoopDetail';
 import ScorePill from '../components/ScorePill';
 import Segmented from '../components/Segmented';
 import VoteButtons from '../components/VoteButtons';
@@ -28,6 +29,9 @@ export default function Feed() {
   const [week, setWeek] = useState<Poop[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, tick] = useState(0);
+  // The entry open in the popup; looked up in the live list so votes update in place.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = openId ? poops?.find((p) => p.id === openId) : undefined;
   const navigate = useNavigate();
   const sentinel = useRef<HTMLDivElement>(null);
 
@@ -124,11 +128,15 @@ export default function Feed() {
             ) : null;
           lastDay = k;
           const name = users.get(p.userId)?.name;
-          const placeLabel = t(`place.${p.place}` as Key);
-          const place = p.place === 'other' && p.placeNote ? p.placeNote : placeLabel + (p.placeNote ? ` · ${p.placeNote}` : '');
+          const place = placeText(p, t);
           return [
             header,
-            <li key={p.id} className={`entry${p.perfect ? ' perfect' : ''}`}>
+            <li
+              key={p.id}
+              className={`entry clickable${p.perfect ? ' perfect' : ''}`}
+              // Links and buttons inside keep their own action.
+              onClick={(e) => !(e.target as HTMLElement).closest('a, button') && setOpenId(p.id)}
+            >
               <Link to={profilePath(p.userId)} className="entry-avatar">
                 <Avatar id={p.userId} name={name} />
               </Link>
@@ -175,6 +183,7 @@ export default function Feed() {
           ];
         })}
       </ul>
+      {open && <PoopDetail poop={open} onClose={() => setOpenId(null)} />}
       {hasMore && (
         <div ref={sentinel} className="feed-more muted">
           {t('common.loading')}

@@ -67,6 +67,9 @@ const en = {
   'feed.sortPosted': 'Posted',
   'feed.posted': 'posted {when}',
   'feed.perfect': 'Perfect',
+  'detail.likes': 'Likes',
+  'detail.dislikes': 'Dislikes',
+  'detail.noVotes': 'No votes yet.',
 
   'log.title': 'Log',
   'log.editTitle': 'Edit',
@@ -331,6 +334,9 @@ const fr: Record<Key, string> = {
   'feed.sortPosted': 'Publication',
   'feed.posted': 'publié {when}',
   'feed.perfect': 'Parfait',
+  'detail.likes': 'J’aime',
+  'detail.dislikes': 'J’aime pas',
+  'detail.noVotes': 'Aucun vote pour l’instant.',
 
   'log.title': 'Noter',
   'log.editTitle': 'Modifier',

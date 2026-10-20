@@ -2097,3 +2097,132 @@ a.tl-entry:hover .tl-main strong {
     top: 20px;
   }
 }
+
+/* ---- entry popup ---- */
+
+.entry.clickable {
+  cursor: pointer;
+}
+.poop-detail {
+  width: min(460px, calc(100% - 32px));
+}
+.poop-detail.perfect {
+  border: 1.5px solid #e2b13f;
+}
+.detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.detail-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+}
+.detail-who > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.detail-who strong {
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-who small {
+  font-size: 0.8rem;
+}
+.score.big {
+  font-size: 1.4rem;
+}
+.detail-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+}
+.detail-fields .wide {
+  grid-column: 1 / -1;
+}
+.detail-fields dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.detail-fields dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.detail-fields dd.note {
+  display: block;
+  font-weight: 400;
+  margin: 0;
+}
+.poop-detail .pill.perfect {
+  background: linear-gradient(135deg, #f6cc5c, #d39b2a);
+  color: #fff;
+  font-weight: 900;
+}
+.detail-votes {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.detail-votes > p {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+}
+.voter-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.voter-cols h3 {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.voter-cols h3.up {
+  color: #4f7d5c;
+}
+.voter-cols h3.down {
+  color: var(--danger);
+}
+.voters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.voters a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.voters a > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-edit {
+  margin-right: auto;
+  align-self: center;
+}
