@@ -36,10 +36,11 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
   const [note, setNote] = useState(initial?.note ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ready = !!type && !!size && !!place && (perfect || !!rating) && !!note.trim();
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!type || !size || !place) return;
+    if (!ready) return;
     const date = new Date(at);
     if (Number.isNaN(date.getTime())) return setError(t('log.invalidTime'));
     if (date.getTime() > Date.now() + 60_000) return setError(t('log.futureTime'));
@@ -54,7 +55,7 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
       duration: duration ? Math.min(180, Math.max(0, Math.round(Number(duration)))) : undefined,
       rating: perfect ? 5 : rating,
       perfect: perfect || undefined,
-      note: note.trim() || undefined,
+      note: note.trim(),
     });
   }
 
@@ -107,7 +108,7 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
           {!perfect && (
             <div>
               <span className="label">{t('log.rating')}</span>
-              <Segmented options={ratingOptions} value={rating} onChange={setRating} allowClear />
+              <Segmented options={ratingOptions} value={rating} onChange={setRating} />
             </div>
           )}
         </section>
@@ -141,14 +142,14 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
           </label>
           <label>
             <span className="label">{t('log.note')}</span>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={280} rows={2} />
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={280} rows={2} required />
           </label>
         </section>
       </div>
 
       {error && <p className="error form-error">{error}</p>}
       <div className="save-bar">
-        <button className="primary big save-btn" disabled={busy || !type || !size || !place}>
+        <button className="primary big save-btn" disabled={busy || !ready}>
           <span>{busy ? t('log.saving') : submitLabel}</span>
           {type && (
             <span className="save-score">
