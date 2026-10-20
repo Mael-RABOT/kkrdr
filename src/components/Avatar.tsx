@@ -1,25 +1,25 @@
-const COLORS = ['#c0703f', '#d39b2a', '#8a6f4e', '#5f8a6b', '#b5574b', '#7a6aa3'];
+import { blobatarUri } from 'blobatar/uri';
+import { useAvatar } from '../avatars';
 
-function hash(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
+// Generated SVGs, by name: the same few people are drawn over and over.
+const generated = new Map<string, string>();
+function blob(seed: string) {
+  let uri = generated.get(seed);
+  if (!uri) generated.set(seed, (uri = blobatarUri(seed)));
+  return uri;
 }
 
+/** Profile picture, or a blobatar generated from the name when there is none. */
 export default function Avatar({ id, name, size = 40 }: { id: string; name: string | undefined; size?: number }) {
-  const initials = (name ?? '?')
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join('');
+  const photo = useAvatar(id);
   return (
-    <span
-      className="avatar"
-      style={{ background: COLORS[hash(id) % COLORS.length], width: size, height: size, fontSize: size * 0.4 }}
-      aria-hidden
-    >
-      {initials || '?'}
-    </span>
+    <img
+      className={photo ? 'avatar' : 'avatar blob'}
+      src={photo ?? blob(name ?? id)}
+      alt=""
+      width={size}
+      height={size}
+      style={{ width: size, height: size }}
+    />
   );
 }

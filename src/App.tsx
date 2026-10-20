@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useT } from './i18n';
+import { AvatarsProvider } from './avatars';
 import { PoopsProvider } from './poops';
 import { useSession } from './session';
 import TabBar from './components/TabBar';
@@ -30,19 +31,21 @@ export default function App() {
 
   return (
     <PoopsProvider>
-      <main className="page">
-        <Routes>
-          <Route path="/" element={<Feed />} />
-          <Route path="/new" element={<NewPoop />} />
-          <Route path="/edit/:id" element={<EditPoop />} />
-          <Route path="/top" element={<Top />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="/u/:id" element={<Profile />} />
-          {me?.admin && <Route path="/admin" element={<Admin />} />}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      <TabBar />
+      <AvatarsProvider>
+        <main className="page">
+          <Routes>
+            <Route path="/" element={<Feed />} />
+            <Route path="/new" element={<NewPoop />} />
+            <Route path="/edit/:id" element={<EditPoop />} />
+            <Route path="/top" element={<Top />} />
+            <Route path="/stats" element={<Stats />} />
+            <Route path="/u/:name" element={<Profile />} />
+            {me?.admin && <Route path="/admin" element={<Admin />} />}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        <TabBar />
+      </AvatarsProvider>
     </PoopsProvider>
   );
 }

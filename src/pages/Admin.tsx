@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
 import { countPoops, createUser, inviteLink, keysFor, regenerateKey, removeUser, revokeKeys, updateUser } from '../data';
@@ -6,6 +7,7 @@ import { useDialogs } from '../dialogs';
 import { useT } from '../i18n';
 import { useSession } from '../session';
 import type { User } from '../types';
+import { nameTaken, useProfilePath } from '../users';
 
 export default function Admin() {
   const t = useT();
@@ -34,6 +36,8 @@ export default function Admin() {
     e.preventDefault();
     const n = name.trim();
     if (!n) return;
+    // Names are used in profile URLs, so they must be unique.
+    if (nameTaken(users, n)) return setError(t('admin.nameTaken', { name: n }));
     await run(async () => {
       setCreated({ name: n, key: await createUser(n) });
       setName('');
@@ -96,6 +100,7 @@ function UserRow({
 }) {
   const t = useT();
   const dialogs = useDialogs();
+  const profilePath = useProfilePath();
   const { me } = useSession();
   const [count, setCount] = useState<number | null>(null);
   const self = user.id === me?.id;
@@ -106,7 +111,7 @@ function UserRow({
 
   return (
     <li className={user.active ? '' : 'inactive'}>
-      <div className="user-head">
+      <Link to={profilePath(user.id)} className="user-head">
         <Avatar id={user.id} name={user.name} />
         <span className="lb-main">
           <span className="lb-name">
@@ -119,7 +124,7 @@ function UserRow({
             {!user.active && <span className="pill danger">{t('admin.inactive')}</span>}
           </span>
         </span>
-      </div>
+      </Link>
       <div className="actions">
         <button
           className="sm"

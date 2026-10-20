@@ -99,6 +99,18 @@ service cloud.firestore {
         && (!(me in after) || after[me] in [1, -1]);
     }
 
+    // Profile pictures: a small image per user, written only by its owner.
+    match /avatars/{userId} {
+      allow read: if valid();
+      allow create, update: if valid() && sess().userId == userId
+        && request.resource.data.keys().hasOnly(['img', 'type', 'updatedAt'])
+        && request.resource.data.img is bytes
+        && request.resource.data.img.size() <= 60000
+        && request.resource.data.type in ['image/webp', 'image/jpeg']
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if (valid() && sess().userId == userId) || isAdmin();
+    }
+
     match /poops/{poopId} {
       allow read: if valid();
       allow create: if valid()

@@ -7,6 +7,7 @@ import { awards, monthStart, netVotes, score, weekStart, type Award } from '../g
 import { useT, type Key } from '../i18n';
 import { usePoops } from '../poops';
 import { useSession } from '../session';
+import { useProfilePath } from '../users';
 
 function Trophy() {
   return (
@@ -21,6 +22,7 @@ function Trophy() {
 
 function HeroAward({ award, title, period }: { award: Award | undefined; title: string; period: string }) {
   const t = useT();
+  const profilePath = useProfilePath();
   const { users } = useSession();
   const p = award?.poop;
   const name = award ? (users.get(award.userId)?.name ?? t('common.unknown')) : '';
@@ -34,7 +36,7 @@ function HeroAward({ award, title, period }: { award: Award | undefined; title: 
         </span>
       </div>
       {award && p ? (
-        <Link to={`/u/${award.userId}`} className="hero-body">
+        <Link to={profilePath(award.userId)} className="hero-body">
           <Avatar id={award.userId} name={name} size={64} />
           <span className="hero-main">
             <strong className="hero-name">{name}</strong>
@@ -58,10 +60,11 @@ function HeroAward({ award, title, period }: { award: Award | undefined; title: 
 
 function SmallAward({ award, label }: { award: Award; label: string }) {
   const t = useT();
+  const profilePath = useProfilePath();
   const { users } = useSession();
   const name = users.get(award.userId)?.name ?? t('common.unknown');
   return (
-    <Link to={`/u/${award.userId}`} className="tile small-award">
+    <Link to={profilePath(award.userId)} className="tile small-award">
       <span className="tile-label">{label}</span>
       <span className="small-award-row">
         <Avatar id={award.userId} name={name} size={28} />
@@ -74,6 +77,7 @@ function SmallAward({ award, label }: { award: Award; label: string }) {
 
 export default function Top() {
   const t = useT();
+  const profilePath = useProfilePath();
   const { users } = useSession();
   const { poops, error } = usePoops();
 
@@ -124,7 +128,7 @@ export default function Top() {
               {champions.length > 0 && (
                 <div className="champions">
                   {champions.map(([id, n], i) => (
-                    <Link key={id} to={`/u/${id}`} className={`champion c${i + 1}`}>
+                    <Link key={id} to={profilePath(id)} className={`champion c${i + 1}`}>
                       <Avatar id={id} name={users.get(id)?.name} size={28} />
                       <span>
                         <strong>{users.get(id)?.name ?? t('common.unknown')}</strong>
@@ -141,7 +145,7 @@ export default function Top() {
                     <li key={a.start.getTime()}>
                       <span className="hall-date">{t('top.weekOf', { date: shortDate(a.start) })}</span>
                       <Avatar id={a.userId} name={name} size={30} />
-                      <Link to={`/u/${a.userId}`} className="lb-main">
+                      <Link to={profilePath(a.userId)} className="lb-main">
                         <span className="lb-name">{name}</span>
                         <span className="lb-sub">{t('admin.logged', { n: a.count })}</span>
                       </Link>

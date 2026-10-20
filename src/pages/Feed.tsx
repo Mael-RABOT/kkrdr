@@ -12,12 +12,14 @@ import { useDialogs } from '../dialogs';
 import { useT, type Key } from '../i18n';
 import { readPref, writePref } from '../prefs';
 import { useSession } from '../session';
+import { useProfilePath } from '../users';
 import type { Poop } from '../types';
 
 const PAGE = 20;
 
 export default function Feed() {
   const t = useT();
+  const profilePath = useProfilePath();
   const dialogs = useDialogs();
   const { me, users } = useSession();
   const [sort, setSortState] = useState<FeedSort>(() => (readPref('feedSort') === 'createdAt' ? 'createdAt' : 'at'));
@@ -127,12 +129,12 @@ export default function Feed() {
           return [
             header,
             <li key={p.id} className={`entry${p.perfect ? ' perfect' : ''}`}>
-              <Link to={`/u/${p.userId}`} className="entry-avatar">
+              <Link to={profilePath(p.userId)} className="entry-avatar">
                 <Avatar id={p.userId} name={name} />
               </Link>
               <div className="entry-body">
                 <div className="entry-top">
-                  <Link to={`/u/${p.userId}`} className="entry-name">
+                  <Link to={profilePath(p.userId)} className="entry-name">
                     {name ?? t('common.unknown')}
                   </Link>
                   <span className="entry-time muted">

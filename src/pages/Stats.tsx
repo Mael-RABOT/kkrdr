@@ -9,6 +9,7 @@ import { score } from '../game';
 import { useT, type Key } from '../i18n';
 import { usePoops } from '../poops';
 import { useSession } from '../session';
+import { useProfilePath } from '../users';
 import { computeStats, periodStart, type Period } from '../stats';
 import { PLACE_IDS, SIZE_IDS, TYPE_IDS } from '../types';
 
@@ -16,6 +17,7 @@ const fmt = (n: number | null, digits = 1) => fmtNum(n, digits);
 
 export default function Stats() {
   const t = useT();
+  const profilePath = useProfilePath();
   const { me, users } = useSession();
   const { poops: all, error } = usePoops();
   const [period, setPeriod] = useState<Period>('week');
@@ -69,7 +71,7 @@ export default function Stats() {
                     <li key={r.userId} className={r.userId === me?.id ? 'me' : ''}>
                       <span className={`rank r${i + 1}`}>{i + 1}</span>
                       <Avatar id={r.userId} name={users.get(r.userId)?.name} size={34} />
-                      <Link to={`/u/${r.userId}`} className="lb-main">
+                      <Link to={profilePath(r.userId)} className="lb-main">
                         <span className="lb-name">{name(r.userId)}</span>
                         <span className="lb-sub">{t('stats.rowSub', { count: r.count, avg: fmt(r.avgScore) })}</span>
                       </Link>

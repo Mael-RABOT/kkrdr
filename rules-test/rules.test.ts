@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, getDocs, collection, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocs, collection, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField, Bytes } from 'firebase/firestore';
 
 let env: RulesTestEnvironment;
 
@@ -103,6 +103,28 @@ describe('as a regular user', () => {
   it('loses access when deactivated', async () => {
     await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'users/bob'), { active: false }));
     await assertFails(getDocs(collection(db('dev1'), 'poops')));
+  });
+});
+
+describe('avatars', () => {
+  beforeEach(() => link('dev1', 'bobkey', 'bob'));
+  const pic = (n = 1000, type = 'image/webp') => ({ img: Bytes.fromUint8Array(new Uint8Array(n)), type, updatedAt: serverTimestamp() });
+
+  it('lets you set, replace and remove only your own picture', async () => {
+    await assertSucceeds(setDoc(doc(db('dev1'), 'avatars/bob'), pic()));
+    await assertSucceeds(setDoc(doc(db('dev1'), 'avatars/bob'), pic(2000, 'image/jpeg')));
+    await assertSucceeds(getDoc(doc(db('dev1'), 'avatars/bob')));
+    await assertFails(setDoc(doc(db('dev1'), 'avatars/alice'), pic()));
+    await assertSucceeds(deleteDoc(doc(db('dev1'), 'avatars/bob')));
+  });
+  it('rejects big, wrongly typed or extra-field pictures', async () => {
+    await assertFails(setDoc(doc(db('dev1'), 'avatars/bob'), pic(60001)));
+    await assertFails(setDoc(doc(db('dev1'), 'avatars/bob'), pic(1000, 'image/svg+xml')));
+    await assertFails(setDoc(doc(db('dev1'), 'avatars/bob'), { ...pic(), x: 1 }));
+    await assertFails(setDoc(doc(db('dev1'), 'avatars/bob'), { img: 'not bytes', type: 'image/webp', updatedAt: serverTimestamp() }));
+  });
+  it('is not readable without a valid session', async () => {
+    await assertFails(getDoc(doc(db('nobody'), 'avatars/bob')));
   });
 });
 

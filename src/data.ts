@@ -4,6 +4,7 @@ import {
   doc,
   getCountFromServer,
   getDoc,
+  getDocFromServer,
   getDocs,
   limit,
   onSnapshot,
@@ -17,6 +18,8 @@ import {
   addDoc,
   updateDoc,
   deleteField,
+  setDoc,
+  Bytes,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Poop, PoopDoc } from './types';
@@ -90,6 +93,41 @@ export function vote(poopId: string, userId: string, value: 1 | -1 | null) {
   return updateDoc(doc(poops, poopId), { [`votes.${userId}`]: value ?? deleteField() });
 }
 
+// ---- avatars ----
+
+const avatars = collection(db, 'avatars');
+
+function avatarUrl(d: { img: Bytes; type: string }) {
+  return `data:${d.type};base64,${d.img.toBase64()}`;
+}
+
+/** Every profile picture as a data URL, by user id, live. */
+export function subscribeAvatars(cb: (m: Map<string, string>) => void, onError: (e: Error) => void) {
+  return onSnapshot(
+    avatars,
+    (snap) => {
+      const m = new Map<string, string>();
+      snap.forEach((d) => m.set(d.id, avatarUrl(d.data() as { img: Bytes; type: string })));
+      cb(m);
+    },
+    onError,
+  );
+}
+
+/** One picture straight from the server (not the cache), or null if there is none. */
+export async function fetchAvatar(userId: string): Promise<string | null> {
+  const snap = await getDocFromServer(doc(avatars, userId));
+  return snap.exists() ? avatarUrl(snap.data() as { img: Bytes; type: string }) : null;
+}
+
+export function setAvatar(userId: string, img: Uint8Array, type: string) {
+  return setDoc(doc(avatars, userId), { img: Bytes.fromUint8Array(img), type, updatedAt: serverTimestamp() });
+}
+
+export function removeAvatar(userId: string) {
+  return deleteDoc(doc(avatars, userId));
+}
+
 // ---- admin ----
 
 const users = collection(db, 'users');
@@ -152,7 +190,12 @@ export async function removeUser(userId: string) {
     getDocs(query(poops, where('userId', '==', userId))),
     keysFor(userId),
   ]);
-  const refs = [...entries.docs.map((d) => d.ref), ...userKeys.map((k) => doc(keys, k)), doc(users, userId)];
+  const refs = [
+    ...entries.docs.map((d) => d.ref),
+    ...userKeys.map((k) => doc(keys, k)),
+    doc(avatars, userId),
+    doc(users, userId),
+  ];
   for (let i = 0; i < refs.length; i += 450) {
     const batch = writeBatch(db);
     refs.slice(i, i + 450).forEach((r) => batch.delete(r));
