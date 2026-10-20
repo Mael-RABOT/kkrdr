@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import LangSwitch from '../components/LangSwitch';
+import { useT, type Key } from '../i18n';
 import { useSession } from '../session';
 
 export default function Welcome() {
+  const t = useT();
   const { authReady, error, link } = useSession();
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -45,22 +48,25 @@ export default function Welcome() {
         <h1 className="brand">
           kk<span>rdr</span>
         </h1>
-        <p className="tagline">Log it. Compare it.</p>
+        <p className="tagline">{t('welcome.tagline')}</p>
         <form onSubmit={onSubmit} className="stack">
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="Your key"
+            placeholder={t('welcome.key')}
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
             autoComplete="off"
           />
           <button className="primary big" disabled={busy || !authReady || !key.trim()}>
-            {busy ? 'Checking' : 'Continue'}
+            {busy ? t('welcome.checking') : t('welcome.continue')}
           </button>
         </form>
-        {(msg ?? error) && <p className="error">{msg ?? error}</p>}
+        {(msg ?? error) && <p className="error">{t((msg ?? error) as Key)}</p>}
+        <div className="welcome-lang">
+          <LangSwitch />
+        </div>
       </div>
     </main>
   );

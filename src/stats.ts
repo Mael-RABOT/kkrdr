@@ -1,13 +1,13 @@
-import { dayKey, startOfDay } from './format';
+import { dayKey, monthStart, startOfDay, weekStart } from './format';
+import { best, rankUsers, score } from './score';
 import type { Place, Poop, Size } from './types';
 
 export type Period = 'week' | 'month' | 'all';
 
 export function periodStart(period: Period, now = new Date()): Date | null {
   if (period === 'all') return null;
-  const d = startOfDay(now);
-  d.setDate(d.getDate() - (period === 'week' ? 6 : 29));
-  return d;
+  // Calendar periods, the same ones used for poop of the week / month.
+  return period === 'week' ? weekStart(now) : monthStart(now);
 }
 
 export interface UserStats {
@@ -17,6 +17,8 @@ export interface UserStats {
   longestStreak: number;
   maxInDay: number;
   avgRating: number | null;
+  points: number;
+  avgScore: number;
 }
 
 export interface Stats {
@@ -26,6 +28,7 @@ export interface Stats {
   streak: { userId: string; days: number } | null;
   busiestDay: { userId: string; count: number; day: string } | null;
   earliest: { userId: string; at: Date } | null;
+  best: Poop | null;
   latest: { userId: string; at: Date } | null;
   hours: number[];
   places: Partial<Record<Place, number>>;
@@ -88,9 +91,13 @@ export function computeStats(poops: Poop[], start: Date | null, now = new Date()
       longestStreak: longestStreak(list.map((p) => p.at)),
       maxInDay,
       avgRating: avg(list.flatMap((p) => (p.rating != null ? [p.rating] : []))),
+      points: list.reduce((a, p) => a + score(p), 0),
+      avgScore: list.reduce((a, p) => a + score(p), 0) / list.length,
     });
   }
-  ranking.sort((a, b) => b.count - a.count || b.longestStreak - a.longestStreak);
+  // Same order as the week / month awards.
+  const order = rankUsers(poops).map((r) => r.userId);
+  ranking.sort((a, b) => order.indexOf(a.userId) - order.indexOf(b.userId));
 
   const streakLeader = [...ranking].sort((a, b) => b.longestStreak - a.longestStreak)[0];
 
@@ -116,6 +123,7 @@ export function computeStats(poops: Poop[], start: Date | null, now = new Date()
     ranking,
     streak: streakLeader ? { userId: streakLeader.userId, days: streakLeader.longestStreak } : null,
     busiestDay,
+    best: best(poops) ?? null,
     earliest,
     latest,
     hours,

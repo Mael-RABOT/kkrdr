@@ -21,33 +21,13 @@ export interface Poop {
   duration?: number;
   rating?: number;
   note?: string;
+  votes?: Record<string, 1 | -1>;
 }
 
 export interface PoopDoc extends Omit<Poop, 'id' | 'at'> {
   at: Timestamp;
 }
 
-export const TYPES: Record<number, string> = {
-  1: 'Hard lumps',
-  2: 'Lumpy',
-  3: 'Cracked',
-  4: 'Smooth',
-  5: 'Soft blobs',
-  6: 'Mushy',
-  7: 'Liquid',
-};
-
-export const SIZES: Record<Size, string> = {
-  S: 'Small',
-  M: 'Medium',
-  L: 'Large',
-  XL: 'Huge',
-};
-
-export const PLACES: Record<Place, string> = {
-  home: 'Home',
-  work: 'Work',
-  friends: "Friend's",
-  public: 'Public',
-  other: 'Other',
-};
+export const TYPE_IDS = [1, 2, 3, 4, 5, 6, 7] as const;
+export const SIZE_IDS: Size[] = ['S', 'M', 'L', 'XL'];
+export const PLACE_IDS: Place[] = ['home', 'work', 'friends', 'public', 'other'];

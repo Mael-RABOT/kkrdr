@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, getDocs, collection, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocs, collection, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField } from 'firebase/firestore';
 
 let env: RulesTestEnvironment;
 
@@ -148,5 +148,34 @@ describe('removing a user', () => {
   it('a regular user cannot delete users', async () => {
     await link('dev1', 'bobkey', 'bob');
     await assertFails(deleteDoc(doc(db('dev1'), 'users/alice')));
+  });
+});
+
+describe('voting', () => {
+  beforeEach(async () => {
+    await link('dev1', 'bobkey', 'bob');
+    await link('dev2', 'alicekey', 'alice');
+  });
+
+  it('can upvote, downvote and remove a vote on someone else\'s poop', async () => {
+    await assertSucceeds(updateDoc(doc(db('dev1'), 'poops/a1'), { 'votes.bob': 1 }));
+    await assertSucceeds(updateDoc(doc(db('dev1'), 'poops/a1'), { 'votes.bob': -1 }));
+    await assertSucceeds(updateDoc(doc(db('dev1'), 'poops/a1'), { 'votes.bob': deleteField() }));
+  });
+  it('cannot vote on own poop', async () => {
+    await assertFails(updateDoc(doc(db('dev2'), 'poops/a1'), { 'votes.alice': 1 }));
+  });
+  it('cannot vote for someone else, use other values, or touch other fields', async () => {
+    await assertFails(updateDoc(doc(db('dev1'), 'poops/a1'), { 'votes.carol': 1 }));
+    await assertFails(updateDoc(doc(db('dev1'), 'poops/a1'), { 'votes.bob': 5 }));
+    await assertFails(updateDoc(doc(db('dev1'), 'poops/a1'), { 'votes.bob': 1, type: 1 }));
+  });
+  it('cannot remove other people\'s votes', async () => {
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'poops/a1'), { votes: { carol: -1 } }));
+    await assertFails(updateDoc(doc(db('dev1'), 'poops/a1'), { votes: { bob: 1 } }));
+  });
+  it('owner cannot fake votes; cannot create with votes', async () => {
+    await assertFails(updateDoc(doc(db('dev2'), 'poops/a1'), { votes: { bob: 1 } }));
+    await assertFails(setDoc(doc(db('dev1'), 'poops/bx'), poop('bob', { votes: { alice: 1 } })));
   });
 });

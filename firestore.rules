@@ -79,7 +79,7 @@ service cloud.firestore {
     function validPoop(d) {
       return d.keys().hasAll(['userId', 'at', 'type', 'size', 'place', 'createdAt'])
         && d.keys().hasOnly(['userId', 'at', 'type', 'size', 'place', 'placeNote',
-                             'duration', 'rating', 'note', 'createdAt'])
+                             'duration', 'rating', 'note', 'createdAt', 'votes'])
         && d.at is timestamp
         && d.at <= request.time + duration.value(5, 'm')
         && d.type is int && d.type >= 1 && d.type <= 7
@@ -91,17 +91,32 @@ service cloud.firestore {
         && optIntRange(d, 'rating', 1, 5);
     }
 
+    // votes is a map { userId: 1 | -1 }; a vote may only add, change or remove your own entry.
+    function validVote(before, after, me) {
+      return after.diff(before).affectedKeys().hasOnly([me])
+        && (!(me in after) || after[me] in [1, -1]);
+    }
+
     match /poops/{poopId} {
       allow read: if valid();
       allow create: if valid()
         && request.resource.data.userId == sess().userId
         && request.resource.data.createdAt == request.time
+        && !('votes' in request.resource.data)
         && validPoop(request.resource.data);
+      // Owner edits: anything but the votes.
       allow update: if valid()
         && resource.data.userId == sess().userId
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.get('votes', {}) == resource.data.get('votes', {})
         && validPoop(request.resource.data);
+      // Voting on someone else's poop.
+      allow update: if valid()
+        && resource.data.userId != sess().userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+        && request.resource.data.votes is map
+        && validVote(resource.data.get('votes', {}), request.resource.data.votes, sess().userId);
       allow delete: if (valid() && resource.data.userId == sess().userId) || isAdmin();
     }
   }

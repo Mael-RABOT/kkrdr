@@ -14,6 +14,7 @@ import {
   writeBatch,
   addDoc,
   updateDoc,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Poop, PoopDoc } from './types';
@@ -36,7 +37,16 @@ export function deletePoop(id: string) {
   return deleteDoc(doc(poops, id));
 }
 
-export function subscribeFeed(n: number, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
+export function subscribeAll(cb: (p: Poop[]) => void, onError: (e: Error) => void) {
+  return onSnapshot(
+    query(poops, orderBy('at', 'desc')),
+    (snap) => cb(snap.docs.map((d) => toPoop(d.id, d.data() as PoopDoc))),
+    onError,
+  );
+}
+
+/** The newest n entries, live. */
+export function subscribeRecent(n: number, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
   return onSnapshot(
     query(poops, orderBy('at', 'desc'), limit(n)),
     (snap) => cb(snap.docs.map((d) => toPoop(d.id, d.data() as PoopDoc))),
@@ -44,10 +54,18 @@ export function subscribeFeed(n: number, cb: (p: Poop[]) => void, onError: (e: E
   );
 }
 
-export async function fetchSince(since: Date | null): Promise<Poop[]> {
-  const q = since ? query(poops, where('at', '>=', Timestamp.fromDate(since))) : poops;
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => toPoop(d.id, d.data() as PoopDoc));
+/** Entries since a date, live. */
+export function subscribeSince(since: Date, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
+  return onSnapshot(
+    query(poops, where('at', '>=', Timestamp.fromDate(since))),
+    (snap) => cb(snap.docs.map((d) => toPoop(d.id, d.data() as PoopDoc))),
+    onError,
+  );
+}
+
+/** Set, change or (with null) remove your vote on someone else's entry. */
+export function vote(poopId: string, userId: string, value: 1 | -1 | null) {
+  return updateDoc(doc(poops, poopId), { [`votes.${userId}`]: value ?? deleteField() });
 }
 
 // ---- admin ----

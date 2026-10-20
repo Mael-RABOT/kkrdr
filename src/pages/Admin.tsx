@@ -2,10 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
 import { countPoops, createUser, inviteLink, keysFor, regenerateKey, removeUser, revokeKeys, updateUser } from '../data';
+import { useT } from '../i18n';
 import { useSession } from '../session';
 import type { User } from '../types';
 
 export default function Admin() {
+  const t = useT();
   const { users } = useSession();
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -39,19 +41,19 @@ export default function Admin() {
 
   return (
     <>
-      <PageHead title="Admin" />
+      <PageHead title={t('admin.title')} />
 
       <section className="card">
-        <h2>Add person</h2>
+        <h2>{t('admin.add')}</h2>
         <form onSubmit={onAdd} className="row">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={30} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('admin.name')} maxLength={30} />
           <button className="primary" disabled={busy || !name.trim()}>
-            Add
+            {t('admin.addBtn')}
           </button>
         </form>
         {created && (
           <>
-            <p className="hint">Send this link to {created.name}:</p>
+            <p className="hint">{t('admin.sendLink', { name: created.name })}</p>
             <KeyBox k={created.key} />
           </>
         )}
@@ -60,7 +62,7 @@ export default function Admin() {
       {error && <p className="error">{error}</p>}
 
       <section className="card">
-        <h2>People</h2>
+        <h2>{t('admin.people')}</h2>
         <ul className="users">
           {list.map((u) => (
             <UserRow
@@ -91,6 +93,7 @@ function UserRow({
   shownKey: string | null | undefined;
   setShown: (key: string | null) => void;
 }) {
+  const t = useT();
   const { me } = useSession();
   const [count, setCount] = useState<number | null>(null);
   const self = user.id === me?.id;
@@ -106,12 +109,12 @@ function UserRow({
         <span className="lb-main">
           <span className="lb-name">
             {user.name}
-            {self && <span className="muted"> (you)</span>}
+            {self && <span className="muted"> ({t('common.you')})</span>}
           </span>
           <span className="tags">
-            <span className="lb-sub">{count ?? '–'} logged</span>
-            {user.admin && <span className="pill amber">admin</span>}
-            {!user.active && <span className="pill danger">inactive</span>}
+            <span className="lb-sub">{t('admin.logged', { n: count ?? '–' })}</span>
+            {user.admin && <span className="pill amber">{t('admin.isAdmin')}</span>}
+            {!user.active && <span className="pill danger">{t('admin.inactive')}</span>}
           </span>
         </span>
       </div>
@@ -121,17 +124,17 @@ function UserRow({
           disabled={busy}
           onClick={() => run(async () => setShown((await keysFor(user.id))[0] ?? null))}
         >
-          Key
+          {t('admin.key')}
         </button>
         <button
           className="sm"
           disabled={busy}
           onClick={() =>
-            confirm(`Give ${user.name} a new key? The old one stops working.`) &&
+            confirm(t('admin.confirmNewKey', { name: user.name })) &&
             run(async () => setShown(await regenerateKey(user.id)))
           }
         >
-          New key
+          {t('admin.newKey')}
         </button>
         {!self && (
           <>
@@ -139,41 +142,40 @@ function UserRow({
               className="sm"
               disabled={busy}
               onClick={() =>
-                confirm(`Revoke ${user.name}'s key? They lose access until given a new one.`) &&
+                confirm(t('admin.confirmRevoke', { name: user.name })) &&
                 run(async () => {
                   await revokeKeys(user.id);
                   setShown(null);
                 })
               }
             >
-              Revoke
+              {t('admin.revoke')}
             </button>
             <button className="sm" disabled={busy} onClick={() => run(() => updateUser(user.id, { active: !user.active }))}>
-              {user.active ? 'Deactivate' : 'Activate'}
+              {user.active ? t('admin.deactivate') : t('admin.activate')}
             </button>
             <button className="sm" disabled={busy} onClick={() => run(() => updateUser(user.id, { admin: !user.admin }))}>
-              {user.admin ? 'Remove admin' : 'Make admin'}
+              {user.admin ? t('admin.removeAdmin') : t('admin.makeAdmin')}
             </button>
             <button
               className="sm danger"
               disabled={busy}
               onClick={() =>
-                confirm(
-                  `Remove ${user.name}? This deletes their key and all ${count ?? 'their'} entries. This cannot be undone.`,
-                ) && run(() => removeUser(user.id))
+                confirm(t('admin.confirmRemove', { name: user.name, n: count ?? '?' })) && run(() => removeUser(user.id))
               }
             >
-              Remove
+              {t('admin.remove')}
             </button>
           </>
         )}
       </div>
-      {shownKey !== undefined && (shownKey ? <KeyBox k={shownKey} /> : <p className="hint">No key. Use New key.</p>)}
+      {shownKey !== undefined && (shownKey ? <KeyBox k={shownKey} /> : <p className="hint">{t('admin.noKey')}</p>)}
     </li>
   );
 }
 
 function KeyBox({ k }: { k: string }) {
+  const t = useT();
   const link = inviteLink(k);
   const [copied, setCopied] = useState(false);
   return (
@@ -185,11 +187,11 @@ function KeyBox({ k }: { k: string }) {
         onClick={() =>
           navigator.clipboard.writeText(link).then(
             () => setCopied(true),
-            () => prompt('Copy this link:', link),
+            () => prompt(t('admin.copyPrompt'), link),
           )
         }
       >
-        {copied ? 'Link copied' : 'Copy invite link'}
+        {copied ? t('admin.copied') : t('admin.copy')}
       </button>
     </div>
   );

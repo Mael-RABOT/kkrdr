@@ -28,8 +28,9 @@ describe('longestStreak', () => {
 });
 
 describe('periodStart', () => {
-  it('returns start of day 6 days back for a week', () => {
-    expect(periodStart('week', d('2026-10-20T15:30'))).toEqual(d('2026-10-14T00:00'));
+  it('uses the calendar week (from Monday) and month', () => {
+    expect(periodStart('week', d('2026-10-20T15:30'))).toEqual(d('2026-10-19T00:00'));
+    expect(periodStart('month', d('2026-10-20T15:30'))).toEqual(d('2026-10-01T00:00'));
     expect(periodStart('all')).toBeNull();
   });
 });
@@ -66,7 +67,7 @@ describe('computeStats', () => {
   it('handles an empty period', () => {
     const e = computeStats([], periodStart('week', now), now);
     expect(e.total).toBe(0);
-    expect(e.days).toBe(7);
+    expect(e.days).toBe(2); // Monday 19 to Tuesday 20
     expect(e.streak).toBeNull();
   });
 });

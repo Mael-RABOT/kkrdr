@@ -30,6 +30,27 @@ Firestore collections: `users`, `keys` (doc id = the secret key), `sessions`, `p
    npx firebase deploy --only hosting
    ```
 
+## Install on your phone
+
+kkrdr is a PWA: once installed it opens full screen like an app, and keeps working offline. Entries logged without a connection sync when you're back online.
+
+- **Android (Chrome):** open the site, then menu (three dots) > **Install app**.
+- **iPhone (Safari):** open the site, then **Share** > **Add to Home Screen**.
+
+When a new version is deployed, the app shows "A new version is available" with a **Reload** button.
+
+App icons are generated from `public/icon.svg`. After changing it, run `npm run icons`.
+
+## Scoring and game
+
+- **Score of a poop** = texture factor x rating x 2 + net votes. The texture factor is 1.0 for type 4 (smooth) and drops by 0.25 per step away (3/5: 0.75, 2/6: 0.5, 1/7: 0.25). Unrated poops count as 3/5, so the score before votes ranges from 0.5 to 10.
+- **Votes:** one up or down vote per person on other people's poops (enforced by the rules).
+- **Poop of the week / month:** the highest score in each week (Monday to Sunday) or calendar month. The Top tab shows the current leader, last period's winner and a hall of fame of past weeks.
+- **XP:** 10 + base score per poop, +2 per upvote received, -1 per downvote, +25 per badge, +50 per week won, +150 per month won. Levels go from Rookie to Legend.
+- **Badges:** 15 achievements (streaks, counts, perfect poop, early bird, night owl, explorer, popular, critic, wins), shown on each profile.
+
+All of this is calculated in the app from the entries, so it needs no server code and stays on the free plan.
+
 ## Local development
 
 Against the emulators (no Firebase project needed, needs Java):

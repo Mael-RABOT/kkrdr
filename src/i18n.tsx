@@ -1,0 +1,481 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { setFormatLang } from './format';
+
+export type Lang = 'en' | 'fr';
+
+const en = {
+  'common.loading': 'Loading',
+  'common.unknown': 'Unknown',
+  'common.delete': 'Delete',
+  'common.offline': 'Offline',
+  'common.you': 'you',
+  'common.points': 'pts',
+  'common.score': 'score',
+  'common.days': '{n} days',
+  'common.days.one': '{n} day',
+  'common.later': 'Later',
+  'common.reload': 'Reload',
+  'common.newVersion': 'A new version is available.',
+  'common.showMore': 'Show more',
+
+  'tab.feed': 'Feed',
+  'tab.top': 'Top',
+  'tab.stats': 'Stats',
+  'tab.admin': 'Admin',
+
+  'welcome.tagline': 'Log it. Compare it.',
+  'welcome.key': 'Your key',
+  'welcome.continue': 'Continue',
+  'welcome.checking': 'Checking',
+  'welcome.unknownKey': 'Unknown key',
+  'welcome.enterKey': 'Enter a key',
+  'welcome.unreachable': 'Could not reach the database. Check your connection.',
+  'welcome.revoked': 'Your access was revoked or your key changed. Ask an admin for a new key.',
+  'welcome.deactivated': 'This account is deactivated.',
+
+  'feed.title': 'Feed',
+  'feed.empty': 'Nothing logged yet.',
+  'feed.logFirst': 'Log the first one',
+  'feed.confirmDelete': 'Delete this entry?',
+  'feed.weekLeader': 'Leading the week',
+  'feed.upvote': 'Upvote',
+  'feed.downvote': 'Downvote',
+  'feed.min': '{n} min',
+
+  'log.title': 'Log',
+  'log.when': 'When',
+  'log.what': 'What',
+  'log.where': 'Where',
+  'log.extras': 'Extras',
+  'log.type': 'Type',
+  'log.size': 'Size',
+  'log.whereExactly': 'Where exactly (optional)',
+  'log.rating': 'Rating',
+  'log.duration': 'Duration in minutes',
+  'log.note': 'Note',
+  'log.save': 'Save',
+  'log.saving': 'Saving',
+  'log.invalidTime': 'Invalid time',
+  'log.futureTime': 'Time is in the future',
+  'log.saveFailed': 'Could not save your entry: {msg}',
+  'log.scorePreview': 'Score {score} / 10',
+  'log.scaleIntro': 'Bristol stool scale. Type 4 scores best; each step away from it counts 25% less.',
+  'log.factor': 'x{f}',
+  'type.1.desc': 'Separate hard lumps',
+  'type.2.desc': 'Sausage-shaped, lumpy',
+  'type.3.desc': 'Sausage-shaped, cracks on the surface',
+  'type.4.desc': 'Sausage-shaped, smooth and soft',
+  'type.5.desc': 'Soft pieces with clear edges',
+  'type.6.desc': 'Mushy pieces with ragged edges',
+  'type.7.desc': 'Entirely liquid, no solid pieces',
+
+  'stats.title': 'Stats',
+  'stats.week': 'Week',
+  'stats.month': 'Month',
+  'stats.all': 'All time',
+  'stats.total': 'Total',
+  'stats.perDay': 'Per day',
+  'stats.yourRank': 'Your rank',
+  'stats.leaderboard': 'Leaderboard',
+  'stats.noEntries': 'No entries in this period.',
+  'stats.lbHint': 'Points = the scores of all your poops added up.',
+  'stats.bestPoop': 'Best poop',
+  'stats.rowSub': '{count} logged · avg {avg}',
+  'stats.you': 'You',
+  'stats.points': 'Points',
+  'stats.avgScore': 'Average score',
+  'stats.longestStreak': 'Longest streak',
+  'stats.mostInDay': 'Most in one day',
+  'stats.records': 'Records',
+  'stats.earliest': 'Earliest',
+  'stats.latest': 'Latest',
+  'stats.byHour': 'By hour',
+  'stats.group': 'Group',
+  'stats.avgRating': 'Average rating',
+  'stats.avgDuration': 'Average duration',
+  'stats.perDayAll': 'Per day, everyone',
+
+  'top.title': 'Top',
+  'top.week': 'Poop of the week',
+  'top.month': 'Poop of the month',
+  'top.running': 'In progress',
+  'top.lastWeek': 'Last week',
+  'top.lastMonth': 'Last month',
+  'top.none': 'Nothing yet. Be the first.',
+  'top.hall': 'Hall of fame',
+  'top.hallSub': 'Winners of past weeks (most points)',
+  'top.bestPoop': 'Best poop: {type} · {score}',
+  'top.weekOf': 'Week of {date}',
+  'top.wins': '{n} wins',
+  'top.wins.one': '{n} win',
+
+  'profile.level': 'Level {n}',
+  'profile.xp': '{xp} XP',
+  'profile.toNext': '{n} XP to next level',
+  'profile.badges': 'Badges',
+  'profile.badgeCount': '{n} of {total}',
+  'profile.best': 'Best poops',
+  'profile.numbers': 'Numbers',
+  'profile.logged': 'Logged',
+  'profile.upvotes': 'Upvotes received',
+  'profile.votesCast': 'Votes cast',
+  'profile.weekWins': 'Weeks won',
+  'profile.monthWins': 'Months won',
+  'profile.notFound': 'Person not found.',
+  'profile.language': 'Language',
+
+  'admin.title': 'Admin',
+  'admin.add': 'Add person',
+  'admin.name': 'Name',
+  'admin.addBtn': 'Add',
+  'admin.sendLink': 'Send this link to {name}:',
+  'admin.people': 'People',
+  'admin.logged': '{n} logged',
+  'admin.isAdmin': 'admin',
+  'admin.inactive': 'inactive',
+  'admin.key': 'Key',
+  'admin.newKey': 'New key',
+  'admin.revoke': 'Revoke',
+  'admin.deactivate': 'Deactivate',
+  'admin.activate': 'Activate',
+  'admin.makeAdmin': 'Make admin',
+  'admin.removeAdmin': 'Remove admin',
+  'admin.remove': 'Remove',
+  'admin.noKey': 'No key. Use New key.',
+  'admin.copy': 'Copy invite link',
+  'admin.copied': 'Link copied',
+  'admin.copyPrompt': 'Copy this link:',
+  'admin.confirmNewKey': 'Give {name} a new key? The old one stops working.',
+  'admin.confirmRevoke': "Revoke {name}'s key? They lose access until given a new one.",
+  'admin.confirmRemove': 'Remove {name}? This deletes their key and all {n} entries. This cannot be undone.',
+
+  'type.1': 'Hard lumps',
+  'type.2': 'Lumpy',
+  'type.3': 'Cracked',
+  'type.4': 'Smooth',
+  'type.5': 'Soft blobs',
+  'type.6': 'Mushy',
+  'type.7': 'Liquid',
+  'size.S': 'Small',
+  'size.M': 'Medium',
+  'size.L': 'Large',
+  'size.XL': 'Huge',
+  'place.home': 'Home',
+  'place.work': 'Work',
+  'place.friends': "Friend's",
+  'place.public': 'Public',
+  'place.other': 'Other',
+
+  'level.0': 'Rookie',
+  'level.1': 'Apprentice',
+  'level.2': 'Regular',
+  'level.3': 'Seasoned',
+  'level.4': 'Skilled',
+  'level.5': 'Expert',
+  'level.6': 'Veteran',
+  'level.7': 'Master',
+  'level.8': 'Grand master',
+  'level.9': 'Throne master',
+  'level.10': 'Legend',
+
+  'badge.first.name': 'First drop',
+  'badge.first.desc': 'Log your first poop',
+  'badge.ten.name': 'Getting started',
+  'badge.ten.desc': 'Log 10 poops',
+  'badge.fifty.name': 'Regular',
+  'badge.fifty.desc': 'Log 50 poops',
+  'badge.hundred.name': 'Centurion',
+  'badge.hundred.desc': 'Log 100 poops',
+  'badge.streak3.name': 'Hat trick',
+  'badge.streak3.desc': '3 days in a row',
+  'badge.streak7.name': 'Clockwork',
+  'badge.streak7.desc': '7 days in a row',
+  'badge.streak30.name': 'Unstoppable',
+  'badge.streak30.desc': '30 days in a row',
+  'badge.perfect.name': 'Perfection',
+  'badge.perfect.desc': 'A smooth one rated 5/5',
+  'badge.early.name': 'Early bird',
+  'badge.early.desc': 'Log one between 4:00 and 7:00',
+  'badge.night.name': 'Night owl',
+  'badge.night.desc': 'Log one between 23:00 and 4:00',
+  'badge.explorer.name': 'Explorer',
+  'badge.explorer.desc': 'Go in all 5 kinds of places',
+  'badge.popular.name': 'Crowd pleaser',
+  'badge.popular.desc': 'Get +5 votes on one poop',
+  'badge.critic.name': 'Critic',
+  'badge.critic.desc': 'Vote on 20 poops',
+  'badge.weekWin.name': 'Weekly champion',
+  'badge.weekWin.desc': 'Finish a week with the most points',
+  'badge.monthWin.name': 'Monthly legend',
+  'badge.monthWin.desc': 'Finish a month with the most points',
+};
+
+export type Key = keyof typeof en;
+
+const fr: Record<Key, string> = {
+  'common.loading': 'Chargement',
+  'common.unknown': 'Inconnu',
+  'common.delete': 'Supprimer',
+  'common.offline': 'Hors ligne',
+  'common.you': 'toi',
+  'common.points': 'pts',
+  'common.score': 'score',
+  'common.days': '{n} jours',
+  'common.days.one': '{n} jour',
+  'common.later': 'Plus tard',
+  'common.reload': 'Recharger',
+  'common.newVersion': 'Une nouvelle version est disponible.',
+  'common.showMore': 'Voir plus',
+
+  'tab.feed': 'Fil',
+  'tab.top': 'Top',
+  'tab.stats': 'Stats',
+  'tab.admin': 'Admin',
+
+  'welcome.tagline': 'Note-le. Compare-le.',
+  'welcome.key': 'Ta clé',
+  'welcome.continue': 'Continuer',
+  'welcome.checking': 'Vérification',
+  'welcome.unknownKey': 'Clé inconnue',
+  'welcome.enterKey': 'Entre une clé',
+  'welcome.unreachable': 'Impossible de joindre la base de données. Vérifie ta connexion.',
+  'welcome.revoked': 'Ton accès a été révoqué ou ta clé a changé. Demande une nouvelle clé à un admin.',
+  'welcome.deactivated': 'Ce compte est désactivé.',
+
+  'feed.title': 'Fil',
+  'feed.empty': 'Rien pour le moment.',
+  'feed.logFirst': 'Noter le premier',
+  'feed.confirmDelete': 'Supprimer cette entrée ?',
+  'feed.weekLeader': 'En tête de la semaine',
+  'feed.upvote': 'Vote positif',
+  'feed.downvote': 'Vote négatif',
+  'feed.min': '{n} min',
+
+  'log.title': 'Noter',
+  'log.when': 'Quand',
+  'log.what': 'Quoi',
+  'log.where': 'Où',
+  'log.extras': 'En plus',
+  'log.type': 'Type',
+  'log.size': 'Taille',
+  'log.whereExactly': 'Où exactement (facultatif)',
+  'log.rating': 'Note',
+  'log.duration': 'Durée en minutes',
+  'log.note': 'Commentaire',
+  'log.save': 'Enregistrer',
+  'log.saving': 'Enregistrement',
+  'log.invalidTime': 'Heure invalide',
+  'log.futureTime': 'L’heure est dans le futur',
+  'log.saveFailed': 'Impossible d’enregistrer : {msg}',
+  'log.scorePreview': 'Score {score} / 10',
+  'log.scaleIntro': 'Échelle de Bristol. Le type 4 rapporte le plus ; chaque cran d’écart compte 25 % de moins.',
+  'log.factor': 'x{f}',
+  'type.1.desc': 'Morceaux durs séparés',
+  'type.2.desc': 'Forme allongée, grumeleuse',
+  'type.3.desc': 'Forme allongée, craquelée en surface',
+  'type.4.desc': 'Forme allongée, lisse et souple',
+  'type.5.desc': 'Morceaux mous aux bords nets',
+  'type.6.desc': 'Morceaux pâteux aux bords irréguliers',
+  'type.7.desc': 'Entièrement liquide, sans morceaux solides',
+
+  'stats.title': 'Stats',
+  'stats.week': 'Semaine',
+  'stats.month': 'Mois',
+  'stats.all': 'Toujours',
+  'stats.total': 'Total',
+  'stats.perDay': 'Par jour',
+  'stats.yourRank': 'Ton rang',
+  'stats.leaderboard': 'Classement',
+  'stats.noEntries': 'Aucune entrée sur cette période.',
+  'stats.lbHint': 'Points = la somme des scores de tous tes cacas.',
+  'stats.bestPoop': 'Meilleur caca',
+  'stats.rowSub': '{count} notés · moy. {avg}',
+  'stats.you': 'Toi',
+  'stats.points': 'Points',
+  'stats.avgScore': 'Score moyen',
+  'stats.longestStreak': 'Plus longue série',
+  'stats.mostInDay': 'Max en un jour',
+  'stats.records': 'Records',
+  'stats.earliest': 'Le plus tôt',
+  'stats.latest': 'Le plus tard',
+  'stats.byHour': 'Par heure',
+  'stats.group': 'Groupe',
+  'stats.avgRating': 'Note moyenne',
+  'stats.avgDuration': 'Durée moyenne',
+  'stats.perDayAll': 'Par jour, tout le monde',
+
+  'top.title': 'Top',
+  'top.week': 'Caca de la semaine',
+  'top.month': 'Caca du mois',
+  'top.running': 'En cours',
+  'top.lastWeek': 'Semaine dernière',
+  'top.lastMonth': 'Mois dernier',
+  'top.none': 'Rien pour l’instant. Sois le premier.',
+  'top.hall': 'Panthéon',
+  'top.hallSub': 'Gagnants des semaines passées (le plus de points)',
+  'top.bestPoop': 'Meilleur caca : {type} · {score}',
+  'top.weekOf': 'Semaine du {date}',
+  'top.wins': '{n} victoires',
+  'top.wins.one': '{n} victoire',
+
+  'profile.level': 'Niveau {n}',
+  'profile.xp': '{xp} XP',
+  'profile.toNext': 'Encore {n} XP pour le niveau suivant',
+  'profile.badges': 'Badges',
+  'profile.badgeCount': '{n} sur {total}',
+  'profile.best': 'Meilleurs cacas',
+  'profile.numbers': 'Chiffres',
+  'profile.logged': 'Notés',
+  'profile.upvotes': 'Votes positifs reçus',
+  'profile.votesCast': 'Votes donnés',
+  'profile.weekWins': 'Semaines gagnées',
+  'profile.monthWins': 'Mois gagnés',
+  'profile.notFound': 'Personne introuvable.',
+  'profile.language': 'Langue',
+
+  'admin.title': 'Admin',
+  'admin.add': 'Ajouter une personne',
+  'admin.name': 'Nom',
+  'admin.addBtn': 'Ajouter',
+  'admin.sendLink': 'Envoie ce lien à {name} :',
+  'admin.people': 'Personnes',
+  'admin.logged': '{n} notés',
+  'admin.isAdmin': 'admin',
+  'admin.inactive': 'inactif',
+  'admin.key': 'Clé',
+  'admin.newKey': 'Nouvelle clé',
+  'admin.revoke': 'Révoquer',
+  'admin.deactivate': 'Désactiver',
+  'admin.activate': 'Activer',
+  'admin.makeAdmin': 'Rendre admin',
+  'admin.removeAdmin': 'Retirer admin',
+  'admin.remove': 'Supprimer',
+  'admin.noKey': 'Pas de clé. Utilise Nouvelle clé.',
+  'admin.copy': 'Copier le lien d’invitation',
+  'admin.copied': 'Lien copié',
+  'admin.copyPrompt': 'Copie ce lien :',
+  'admin.confirmNewKey': 'Donner une nouvelle clé à {name} ? L’ancienne ne marchera plus.',
+  'admin.confirmRevoke': 'Révoquer la clé de {name} ? Plus d’accès tant qu’il n’en a pas de nouvelle.',
+  'admin.confirmRemove': 'Supprimer {name} ? Sa clé et ses {n} entrées seront effacées. Action définitive.',
+
+  'type.1': 'Billes dures',
+  'type.2': 'Grumeleux',
+  'type.3': 'Craquelé',
+  'type.4': 'Lisse',
+  'type.5': 'Morceaux mous',
+  'type.6': 'Pâteux',
+  'type.7': 'Liquide',
+  'size.S': 'Petit',
+  'size.M': 'Moyen',
+  'size.L': 'Gros',
+  'size.XL': 'Énorme',
+  'place.home': 'Maison',
+  'place.work': 'Travail',
+  'place.friends': 'Chez un ami',
+  'place.public': 'Public',
+  'place.other': 'Autre',
+
+  'level.0': 'Débutant',
+  'level.1': 'Apprenti',
+  'level.2': 'Habitué',
+  'level.3': 'Confirmé',
+  'level.4': 'Doué',
+  'level.5': 'Expert',
+  'level.6': 'Vétéran',
+  'level.7': 'Maître',
+  'level.8': 'Grand maître',
+  'level.9': 'Maître du trône',
+  'level.10': 'Légende',
+
+  'badge.first.name': 'Premier jet',
+  'badge.first.desc': 'Noter ton premier caca',
+  'badge.ten.name': 'Ça démarre',
+  'badge.ten.desc': 'Noter 10 cacas',
+  'badge.fifty.name': 'Habitué',
+  'badge.fifty.desc': 'Noter 50 cacas',
+  'badge.hundred.name': 'Centurion',
+  'badge.hundred.desc': 'Noter 100 cacas',
+  'badge.streak3.name': 'Coup du chapeau',
+  'badge.streak3.desc': '3 jours d’affilée',
+  'badge.streak7.name': 'Réglé comme une horloge',
+  'badge.streak7.desc': '7 jours d’affilée',
+  'badge.streak30.name': 'Inarrêtable',
+  'badge.streak30.desc': '30 jours d’affilée',
+  'badge.perfect.name': 'Perfection',
+  'badge.perfect.desc': 'Un lisse noté 5/5',
+  'badge.early.name': 'Lève-tôt',
+  'badge.early.desc': 'En noter un entre 4 h et 7 h',
+  'badge.night.name': 'Oiseau de nuit',
+  'badge.night.desc': 'En noter un entre 23 h et 4 h',
+  'badge.explorer.name': 'Explorateur',
+  'badge.explorer.desc': 'Aller dans les 5 types de lieux',
+  'badge.popular.name': 'Chouchou',
+  'badge.popular.desc': 'Recevoir +5 votes sur un caca',
+  'badge.critic.name': 'Critique',
+  'badge.critic.desc': 'Voter pour 20 cacas',
+  'badge.weekWin.name': 'Champion de la semaine',
+  'badge.weekWin.desc': 'Finir une semaine avec le plus de points',
+  'badge.monthWin.name': 'Légende du mois',
+  'badge.monthWin.desc': 'Finir un mois avec le plus de points',
+};
+
+const dicts: Record<Lang, Record<Key, string>> = { en, fr };
+
+function detect(): Lang {
+  try {
+    const saved = localStorage.getItem('lang');
+    if (saved === 'en' || saved === 'fr') return saved;
+  } catch {
+    // storage unavailable
+  }
+  return navigator.language?.toLowerCase().startsWith('fr') ? 'fr' : 'en';
+}
+
+export type T = (key: Key, params?: Record<string, string | number>) => string;
+
+interface I18n {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: T;
+}
+
+const Ctx = createContext<I18n | null>(null);
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(detect);
+  setFormatLang(lang);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    try {
+      localStorage.setItem('lang', l);
+    } catch {
+      // storage unavailable
+    }
+  };
+
+  const t: T = (key, params) => {
+    // Singular variant ("key.one") when n is 1, if there is one.
+    const one = params?.n === 1 ? (`${key}.one` as Key) : undefined;
+    const k = one && one in en ? one : key;
+    let s = dicts[lang][k] ?? en[k] ?? key;
+    if (params) for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, String(v));
+    return s;
+  };
+
+  return <Ctx.Provider value={{ lang, setLang, t }}>{children}</Ctx.Provider>;
+}
+
+export function useI18n() {
+  const c = useContext(Ctx);
+  if (!c) throw new Error('useI18n outside provider');
+  return c;
+}
+
+export function useT() {
+  return useI18n().t;
+}

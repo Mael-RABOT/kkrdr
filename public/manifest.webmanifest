@@ -1,9 +1,0 @@
-{
-  "name": "kkrdr",
-  "short_name": "kkrdr",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#faf6f0",
-  "theme_color": "#7a5230",
-  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
-}

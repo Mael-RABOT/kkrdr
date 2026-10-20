@@ -7,3 +7,4 @@ dist
 .idea/workspace.xml
 *.tsbuildinfo
 service-account*.json
+dev-dist

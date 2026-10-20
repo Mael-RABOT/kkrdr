@@ -1,88 +1,81 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import BarChart from '../components/BarChart';
 import PageHead from '../components/PageHead';
 import Segmented from '../components/Segmented';
-import { fetchSince } from '../data';
-import { timeOfDay } from '../format';
+import { fmtNum, fmtPts, timeOfDay } from '../format';
+import { score } from '../game';
+import { useT, type Key } from '../i18n';
+import { usePoops } from '../poops';
 import { useSession } from '../session';
 import { computeStats, periodStart, type Period } from '../stats';
-import { PLACES, SIZES, TYPES, type Place, type Poop, type Size } from '../types';
+import { PLACE_IDS, SIZE_IDS, TYPE_IDS } from '../types';
 
-const periods = [
-  { value: 'week' as const, label: 'Week' },
-  { value: 'month' as const, label: 'Month' },
-  { value: 'all' as const, label: 'All time' },
-];
-
-const fmt = (n: number | null, digits = 1) => (n == null ? '–' : n.toFixed(digits));
+const fmt = (n: number | null, digits = 1) => fmtNum(n, digits);
 
 export default function Stats() {
+  const t = useT();
   const { me, users } = useSession();
+  const { poops: all, error } = usePoops();
   const [period, setPeriod] = useState<Period>('week');
-  const [poops, setPoops] = useState<Poop[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const periods = [
+    { value: 'week' as const, label: t('stats.week') },
+    { value: 'month' as const, label: t('stats.month') },
+    { value: 'all' as const, label: t('stats.all') },
+  ];
 
   const start = useMemo(() => periodStart(period), [period]);
-
-  useEffect(() => {
-    let alive = true;
-    setPoops(null);
-    fetchSince(start)
-      .then((p) => alive && setPoops(p))
-      .catch((e) => alive && setError(e.message));
-    return () => {
-      alive = false;
-    };
-  }, [start]);
-
+  const poops = useMemo(() => (all && start ? all.filter((p) => p.at >= start) : all), [all, start]);
   const s = useMemo(() => (poops ? computeStats(poops, start) : null), [poops, start]);
-  const name = (id: string) => users.get(id)?.name ?? 'Unknown';
+  const name = (id: string) => users.get(id)?.name ?? t('common.unknown');
   const myIndex = s?.ranking.findIndex((r) => r.userId === me?.id) ?? -1;
   const mine = myIndex >= 0 ? s!.ranking[myIndex] : undefined;
 
   return (
     <>
-      <PageHead title="Stats" />
+      <PageHead title={t('stats.title')} />
       <Segmented options={periods} value={period} onChange={(v) => v && setPeriod(v)} variant="pills" />
 
       {error && <p className="error mt">{error}</p>}
-      {!s && !error && <p className="muted">Loading</p>}
+      {!s && !error && <p className="muted">{t('common.loading')}</p>}
 
       {s && (
         <>
           <div className="tiles">
             <div className="tile">
               <span className="tile-value">{s.total}</span>
-              <span className="tile-label">Total</span>
+              <span className="tile-label">{t('stats.total')}</span>
             </div>
             <div className="tile">
               <span className="tile-value">{fmt(s.total / s.days)}</span>
-              <span className="tile-label">Per day</span>
+              <span className="tile-label">{t('stats.perDay')}</span>
             </div>
             <div className="tile">
               <span className="tile-value">{myIndex >= 0 ? `#${myIndex + 1}` : '–'}</span>
-              <span className="tile-label">Your rank</span>
+              <span className="tile-label">{t('stats.yourRank')}</span>
             </div>
           </div>
 
           <section className="card">
-            <h2>Leaderboard</h2>
+            <h2>{t('stats.leaderboard')}</h2>
+            <p className="hint card-sub">{t('stats.lbHint')}</p>
             {s.ranking.length === 0 ? (
-              <p className="muted">No entries in this period.</p>
+              <p className="muted">{t('stats.noEntries')}</p>
             ) : (
               <ol className="lb">
                 {s.ranking.map((r, i) => (
                   <li key={r.userId} className={r.userId === me?.id ? 'me' : ''}>
                     <span className={`rank r${i + 1}`}>{i + 1}</span>
                     <Avatar id={r.userId} name={users.get(r.userId)?.name} size={34} />
-                    <span className="lb-main">
+                    <Link to={`/u/${r.userId}`} className="lb-main">
                       <span className="lb-name">{name(r.userId)}</span>
-                      <span className="lb-sub">
-                        {fmt(r.perDay)} per day · best streak {r.longestStreak}d
-                      </span>
+                      <span className="lb-sub">{t('stats.rowSub', { count: r.count, avg: fmt(r.avgScore) })}</span>
+                    </Link>
+                    <span className="lb-count">
+                      {fmtPts(r.points)}
+                      <small> {t('common.points')}</small>
                     </span>
-                    <span className="lb-count">{r.count}</span>
                   </li>
                 ))}
               </ol>
@@ -90,59 +83,62 @@ export default function Stats() {
           </section>
 
           <section className="card">
-            <h2>You</h2>
+            <h2>{t('stats.you')}</h2>
             <dl className="kv">
-              <dt>Total</dt>
+              <dt>{t('stats.points')}</dt>
+              <dd>{fmtPts(mine?.points ?? 0)}</dd>
+              <dt>{t('stats.avgScore')}</dt>
+              <dd>{fmt(mine?.avgScore ?? null)}</dd>
+              <dt>{t('stats.total')}</dt>
               <dd>{mine?.count ?? 0}</dd>
-              <dt>Per day</dt>
+              <dt>{t('stats.perDay')}</dt>
               <dd>{fmt(mine?.perDay ?? 0)}</dd>
-              <dt>Longest streak</dt>
-              <dd>{mine?.longestStreak ?? 0} days</dd>
-              <dt>Most in one day</dt>
+              <dt>{t('stats.longestStreak')}</dt>
+              <dd>{t('common.days', { n: mine?.longestStreak ?? 0 })}</dd>
+              <dt>{t('stats.mostInDay')}</dt>
               <dd>{mine?.maxInDay ?? 0}</dd>
-              <dt>Average rating</dt>
-              <dd>{fmt(mine?.avgRating ?? null)}</dd>
             </dl>
           </section>
 
           {s.total > 0 && (
             <>
               <section className="card">
-                <h2>Records</h2>
+                <h2>{t('stats.records')}</h2>
                 <div className="tiles two">
-                  <Record label="Longest streak" value={s.streak && `${s.streak.days} days`} who={s.streak && name(s.streak.userId)} />
-                  <Record label="Most in one day" value={s.busiestDay && String(s.busiestDay.count)} who={s.busiestDay && name(s.busiestDay.userId)} />
-                  <Record label="Earliest" value={s.earliest && timeOfDay(s.earliest.at)} who={s.earliest && name(s.earliest.userId)} />
-                  <Record label="Latest" value={s.latest && timeOfDay(s.latest.at)} who={s.latest && name(s.latest.userId)} />
+                  <Record wide label={t('stats.bestPoop')} value={s.best && fmtNum(score(s.best))} who={s.best && name(s.best.userId)} />
+                  <Record label={t('stats.longestStreak')} value={s.streak && t('common.days', { n: s.streak.days })} who={s.streak && name(s.streak.userId)} />
+                  <Record label={t('stats.mostInDay')} value={s.busiestDay && String(s.busiestDay.count)} who={s.busiestDay && name(s.busiestDay.userId)} />
+                  <Record label={t('stats.earliest')} value={s.earliest && timeOfDay(s.earliest.at)} who={s.earliest && name(s.earliest.userId)} />
+                  <Record label={t('stats.latest')} value={s.latest && timeOfDay(s.latest.at)} who={s.latest && name(s.latest.userId)} />
                 </div>
               </section>
 
               <section className="card">
-                <h2>By hour</h2>
+                <h2>{t('stats.byHour')}</h2>
                 <BarChart data={s.hours.map((v, h) => ({ label: h % 6 === 0 ? `${h}h` : '', value: v }))} />
               </section>
 
               <section className="card">
-                <h2>Group</h2>
+                <h2>{t('stats.group')}</h2>
                 <dl className="kv">
-                  <dt>Average rating</dt>
+                  <dt>{t('stats.avgRating')}</dt>
                   <dd>{fmt(s.avgRating)}</dd>
-                  <dt>Average duration</dt>
-                  <dd>{s.avgDuration == null ? '–' : `${fmt(s.avgDuration)} min`}</dd>
+                  <dt>{t('stats.avgDuration')}</dt>
+                  <dd>{s.avgDuration == null ? '–' : t('feed.min', { n: fmt(s.avgDuration) })}</dd>
                 </dl>
                 <Breakdown
-                  title="Type"
-                  rows={Object.keys(TYPES).map((t) => [`${t} · ${TYPES[Number(t)]}`, s.types[Number(t)]])}
+                  title={t('log.type')}
+                  rows={TYPE_IDS.map((n) => [`${n} · ${t(`type.${n}` as Key)}`, s.types[n]])}
                   total={s.total}
                 />
                 <Breakdown
-                  title="Size"
-                  rows={(Object.keys(SIZES) as Size[]).map((k) => [SIZES[k], s.sizes[k] ?? 0])}
+                  title={t('log.size')}
+                  rows={SIZE_IDS.map((k) => [t(`size.${k}` as Key), s.sizes[k] ?? 0])}
                   total={s.total}
                 />
                 <Breakdown
-                  title="Place"
-                  rows={(Object.keys(PLACES) as Place[]).map((k) => [PLACES[k], s.places[k] ?? 0])}
+                  title={t('log.where')}
+                  rows={PLACE_IDS.map((k) => [t(`place.${k}` as Key), s.places[k] ?? 0])}
                   total={s.total}
                 />
               </section>
@@ -154,9 +150,9 @@ export default function Stats() {
   );
 }
 
-function Record({ label, value, who }: { label: string; value: string | null; who: string | null }) {
+function Record({ label, value, who, wide }: { label: string; value: string | null; who: string | null; wide?: boolean }) {
   return (
-    <div className="tile">
+    <div className={`tile${wide ? ' wide' : ''}`}>
       <span className="tile-value">{value ?? '–'}</span>
       <span className="tile-label">{label}</span>
       {who && <span className="tile-sub">{who}</span>}

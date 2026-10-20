@@ -23,7 +23,7 @@ function withTimeout<T>(p: Promise<T>, ms = 15_000): Promise<T> {
   return Promise.race([
     p,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Could not reach the database. Check your connection and the Firebase setup.')), ms),
+      setTimeout(() => reject(new Error('welcome.unreachable')), ms),
     ),
   ]);
 }
@@ -83,7 +83,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       () => {
         setUsers(null);
         setUserId(null);
-        setError('Your access was revoked or your key changed. Ask an admin for a new key.');
+        setError('welcome.revoked');
       },
     );
   }, [userId]);
@@ -91,9 +91,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const link = useCallback(
     async (rawKey: string) => {
       const key = rawKey.trim();
-      if (!uid || !key) throw new Error('Enter a key');
+      if (!uid || !key) throw new Error('welcome.enterKey');
       const k = await withTimeout(getDoc(doc(db, 'keys', key)));
-      if (!k.exists()) throw new Error('Unknown key');
+      if (!k.exists()) throw new Error('welcome.unknownKey');
       await withTimeout(setDoc(doc(db, 'sessions', uid), { key, userId: k.data().userId, createdAt: serverTimestamp() }));
       setError(null);
     },
@@ -109,7 +109,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   if (linkedChecked && !userId) status = 'unlinked';
   else if (users) status = me?.active ? 'ready' : 'unlinked';
 
-  const shownError = error ?? (users && me && !me.active ? 'This account is deactivated.' : null);
+  const shownError = error ?? (users && me && !me.active ? 'welcome.deactivated' : null);
 
   return (
     <Ctx.Provider value={{ status, authReady: uid !== null, error: shownError, me: status === 'ready' ? me : null, users: users ?? new Map(), link, unlink }}>

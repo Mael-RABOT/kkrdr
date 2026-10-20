@@ -6,6 +6,8 @@ function value(v) {
   if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (typeof v === 'boolean') return { booleanValue: v };
   if (Number.isInteger(v)) return { integerValue: String(v) };
+  if (v && typeof v === 'object')
+    return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, value(x)])) } };
   return { stringValue: String(v) };
 }
 
@@ -33,7 +35,7 @@ for (const [id, name, admin, key] of people) {
 const sizes = ['S', 'M', 'L', 'XL'];
 const places = ['home', 'work', 'friends', 'public', 'other'];
 let n = 0;
-for (let day = 0; day < 20; day++) {
+for (let day = 0; day < 45; day++) {
   for (const [id] of people) {
     const count = Math.floor(Math.random() * 3);
     for (let i = 0; i < count; i++) {
@@ -48,6 +50,9 @@ for (let day = 0; day < 20; day++) {
         size: sizes[Math.floor(Math.random() * 4)],
         place: places[Math.floor(Math.random() * 5)],
         rating: 1 + Math.floor(Math.random() * 5),
+        votes: Object.fromEntries(
+          people.filter(([other]) => other !== id && Math.random() < 0.4).map(([other]) => [other, Math.random() < 0.8 ? 1 : -1]),
+        ),
         createdAt: at,
       });
     }
