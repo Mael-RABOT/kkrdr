@@ -39,7 +39,7 @@ kkrdr is a PWA: once installed it opens full screen like an app, and keeps worki
 
 When a new version is deployed, the app shows "A new version is available" with a **Reload** button.
 
-App icons are generated from `public/icon.svg`. After changing it, run `npm run icons`.
+App icons (favicon, PWA and Apple icons) are generated from `public/poop.png`. After changing it, run `npm run icons`.
 
 ## Scoring and game
 

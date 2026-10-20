@@ -146,7 +146,9 @@ a {
   padding: 12px 2px 16px;
 }
 .wordmark {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.85rem;
   font-weight: 900;
   letter-spacing: 0.02em;
@@ -383,6 +385,10 @@ button.link.danger {
   max-width: 380px;
   text-align: center;
   padding: 32px 24px 28px;
+}
+.brand-logo {
+  display: block;
+  margin: 0 auto 12px;
 }
 .brand {
   font-size: 3rem;

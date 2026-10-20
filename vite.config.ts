@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'poop.png'],
       manifest: {
         name: 'kkrdr',
         short_name: 'kkrdr',

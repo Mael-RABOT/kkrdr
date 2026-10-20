@@ -47,6 +47,7 @@ export default function Welcome() {
   return (
     <main className="welcome">
       <div className="card welcome-card">
+        <img className="brand-logo" src="/pwa-192x192.png" alt="" width={96} height={96} />
         <h1 className="brand">
           kk<span>rdr</span>
         </h1>
