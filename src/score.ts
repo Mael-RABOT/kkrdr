@@ -10,6 +10,13 @@ export function baseScore(p: Pick<Poop, 'type' | 'rating'>): number {
   return textureFactor(p.type) * (p.rating ?? 3) * 2;
 }
 
+export type ScoreTier = 'low' | 'mid' | 'good' | 'gold';
+
+/** Colour band of a score, from muted (low) to gold (high). */
+export function scoreTier(s: number): ScoreTier {
+  return s >= 9 ? 'gold' : s >= 6 ? 'good' : s >= 3 ? 'mid' : 'low';
+}
+
 export function netVotes(p: Pick<Poop, 'votes'>): number {
   return Object.values(p.votes ?? {}).reduce<number>((a, v) => a + v, 0);
 }

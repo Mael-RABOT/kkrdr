@@ -1,6 +1,6 @@
 # kkrdr
 
-A small mobile-first web app to log poops with friends: a shared feed, a leaderboard with stats, and an admin view to hand out access keys. React + Vite + TypeScript on Firebase (Firestore, Anonymous Auth, Hosting). Runs on the free Spark plan.
+Pronounced [K][Car][D][Heure]
 
 ## How access works
 

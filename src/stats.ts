@@ -43,7 +43,8 @@ export interface Stats {
 
 const DAY = 86_400_000;
 
-function daysBetween(a: Date, b: Date) {
+/** Calendar days from a to b (DST-safe). */
+export function daysBetween(a: Date, b: Date) {
   return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / DAY);
 }
 

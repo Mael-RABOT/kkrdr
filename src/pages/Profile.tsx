@@ -7,6 +7,7 @@ import LevelBar from '../components/LevelBar';
 import PageHead from '../components/PageHead';
 import PictureEditor from '../components/PictureEditor';
 import ScorePill from '../components/ScorePill';
+import Timeline from '../components/Timeline';
 import { removeAvatar, setAvatar } from '../data';
 import { useDialogs } from '../dialogs';
 import { fmtNum, fmtPts, shortDate } from '../format';
@@ -128,6 +129,11 @@ export default function Profile() {
               </dl>
             </section>
           </div>
+
+          <section className="card">
+            <h2>{t('profile.timeline')}</h2>
+            <Timeline poops={p.poops} />
+          </section>
         </>
       )}
     </>

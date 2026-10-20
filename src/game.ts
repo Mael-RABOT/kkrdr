@@ -4,7 +4,7 @@ export { monthStart, weekStart } from './format';
 import { longestStreak } from './stats';
 import { PLACE_IDS, type Poop } from './types';
 
-export { baseScore, best, netVotes, rankUsers, score, textureFactor } from './score';
+export { baseScore, best, netVotes, rankUsers, score, scoreTier, textureFactor } from './score';
 import { baseScore, best, netVotes, rankUsers, score } from './score';
 
 // ---- periods ----
