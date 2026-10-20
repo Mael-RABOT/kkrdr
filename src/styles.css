@@ -2103,8 +2103,14 @@ a.tl-entry:hover .tl-main strong {
 .entry.clickable {
   cursor: pointer;
 }
+/* The page stays put while an entry is open; only the popup scrolls. */
+html:has(.poop-detail[open]),
+html:has(.poop-detail[open]) body {
+  overflow: hidden;
+}
 .poop-detail {
   width: min(460px, calc(100% - 32px));
+  overscroll-behavior: contain;
 }
 .poop-detail.perfect {
   border: 1.5px solid #e2b13f;
