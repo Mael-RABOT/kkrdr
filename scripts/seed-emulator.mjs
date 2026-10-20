@@ -1,0 +1,57 @@
+// Seeds the local Firestore emulator with an admin, two users and some entries.
+// Usage: npm run emulators (in another terminal), then npm run seed
+const base = 'http://127.0.0.1:8080/v1/projects/demo-kkrdr/databases/(default)/documents';
+
+function value(v) {
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (Number.isInteger(v)) return { integerValue: String(v) };
+  return { stringValue: String(v) };
+}
+
+async function put(path, data) {
+  const fields = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, value(v)]));
+  const res = await fetch(`${base}/${path}`, {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  if (!res.ok) throw new Error(`${path}: ${res.status} ${await res.text()}`);
+}
+
+const now = new Date();
+const people = [
+  ['admin', 'Admin', true, 'adminkey'],
+  ['sam', 'Sam', false, 'samkey'],
+  ['lou', 'Lou', false, 'loukey'],
+];
+for (const [id, name, admin, key] of people) {
+  await put(`users/${id}`, { name, admin, active: true, createdAt: now });
+  await put(`keys/${key}`, { userId: id, createdAt: now });
+}
+
+const sizes = ['S', 'M', 'L', 'XL'];
+const places = ['home', 'work', 'friends', 'public', 'other'];
+let n = 0;
+for (let day = 0; day < 20; day++) {
+  for (const [id] of people) {
+    const count = Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      const at = new Date(now);
+      at.setDate(at.getDate() - day);
+      at.setHours(6 + Math.floor(Math.random() * 16), Math.floor(Math.random() * 60), 0, 0);
+      if (at > now) continue;
+      await put(`poops/seed${n++}`, {
+        userId: id,
+        at,
+        type: 1 + Math.floor(Math.random() * 7),
+        size: sizes[Math.floor(Math.random() * 4)],
+        place: places[Math.floor(Math.random() * 5)],
+        rating: 1 + Math.floor(Math.random() * 5),
+        createdAt: at,
+      });
+    }
+  }
+}
+console.log(`Seeded ${people.length} users and ${n} entries.`);
+console.log('Open http://localhost:5173/welcome?key=adminkey');
