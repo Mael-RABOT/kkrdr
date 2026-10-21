@@ -1560,6 +1560,47 @@ img.avatar.blob,
   margin-top: 4px;
 }
 
+/* ---- color picker ---- */
+
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.swatch {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--swatch);
+}
+.swatch.on {
+  border-color: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+.swatch.dot {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-width: 1px;
+}
+.color-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.swatch-brown { --swatch: #7a4a22; }
+.swatch-dark { --swatch: #4a2c14; }
+.swatch-light { --swatch: #b8854f; }
+.swatch-yellow { --swatch: #d9b440; }
+.swatch-green { --swatch: #5f7a2e; }
+.swatch-red { --swatch: #a8322a; }
+.swatch-black { --swatch: #1e1a17; }
+.swatch-grey { --swatch: #b9b2a8; }
+
 /* ---- perfect ---- */
 
 .perfect-btn {

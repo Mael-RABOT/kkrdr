@@ -43,7 +43,7 @@ export function addPoop(userId: string, p: NewPoop) {
   return addDoc(poops, data);
 }
 
-const OPTIONAL = ['placeNote', 'duration', 'rating', 'note', 'perfect'] as const;
+const OPTIONAL = ['placeNote', 'duration', 'rating', 'color', 'note', 'perfect'] as const;
 
 /** Owner edit: every field is rewritten, empty optional ones removed. Votes, author and createdAt stay. */
 export function updatePoop(id: string, p: NewPoop) {

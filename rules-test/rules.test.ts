@@ -70,7 +70,8 @@ describe('as a regular user', () => {
     await assertFails(setDoc(doc(db('dev1'), 'poops/x'), poop('bob', { size: 'XXL' })));
     await assertFails(setDoc(doc(db('dev1'), 'poops/x'), poop('bob', { hack: true })));
     await assertFails(setDoc(doc(db('dev1'), 'poops/x'), poop('bob', { note: 'x'.repeat(281) })));
-    await assertSucceeds(setDoc(doc(db('dev1'), 'poops/x'), poop('bob', { rating: 5, duration: 3, note: 'ok' })));
+    await assertFails(setDoc(doc(db('dev1'), 'poops/x'), poop('bob', { color: 'purple' })));
+    await assertSucceeds(setDoc(doc(db('dev1'), 'poops/x'), poop('bob', { rating: 5, duration: 3, color: 'green', note: 'ok' })));
   });
   it('accepts a Perfect only as type 4 rated 5', async () => {
     await assertSucceeds(setDoc(doc(db('dev1'), 'poops/p1'), poop('bob', { type: 4, rating: 5, perfect: true })));

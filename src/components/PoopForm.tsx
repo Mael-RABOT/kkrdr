@@ -4,7 +4,8 @@ import { useDialogs } from '../dialogs';
 import { fmtNum, toLocalInput } from '../format';
 import { baseScore } from '../game';
 import { useT, type Key } from '../i18n';
-import { PLACE_IDS, SIZE_IDS, type Place, type Poop, type Size } from '../types';
+import { PLACE_IDS, SIZE_IDS, type Color, type Place, type Poop, type Size } from '../types';
+import ColorPicker from './ColorPicker';
 import Segmented from './Segmented';
 import TypePicker from './TypePicker';
 
@@ -32,6 +33,7 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
   const [placeNote, setPlaceNote] = useState(initial?.placeNote ?? '');
   const [duration, setDuration] = useState(initial?.duration != null ? String(initial.duration) : '');
   const [rating, setRating] = useState<number | undefined>(initial?.rating);
+  const [color, setColor] = useState<Color | undefined>(initial?.color);
   const [perfect, setPerfect] = useState(initial?.perfect ?? false);
   const [note, setNote] = useState(initial?.note ?? '');
   const [busy, setBusy] = useState(false);
@@ -54,6 +56,7 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
       placeNote: placeNote.trim() || undefined,
       duration: duration ? Math.min(180, Math.max(0, Math.round(Number(duration)))) : undefined,
       rating: perfect ? 5 : rating,
+      color,
       perfect: perfect || undefined,
       note: note.trim(),
     });
@@ -104,6 +107,10 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
           <div>
             <span className="label">{t('log.size')}</span>
             <Segmented options={sizeOptions} value={size} onChange={setSize} />
+          </div>
+          <div>
+            <span className="label">{t('log.color')}</span>
+            <ColorPicker value={color} onChange={setColor} />
           </div>
           {!perfect && (
             <div>

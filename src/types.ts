@@ -2,6 +2,7 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type Size = 'S' | 'M' | 'L' | 'XL';
 export type Place = 'home' | 'work' | 'friends' | 'public' | 'other';
+export type Color = 'brown' | 'dark' | 'light' | 'yellow' | 'green' | 'red' | 'black' | 'grey';
 
 export interface User {
   id: string;
@@ -20,6 +21,8 @@ export interface Poop {
   placeNote?: string;
   duration?: number;
   rating?: number;
+  /** Just for the record, no effect on the score. */
+  color?: Color;
   note?: string;
   votes?: Record<string, 1 | -1>;
   /** One piece, leaves no mark. Always type 4 rated 5. */
@@ -36,3 +39,4 @@ export interface PoopDoc extends Omit<Poop, 'id' | 'at' | 'createdAt'> {
 export const TYPE_IDS = [1, 2, 3, 4, 5, 6, 7] as const;
 export const SIZE_IDS: Size[] = ['S', 'M', 'L', 'XL'];
 export const PLACE_IDS: Place[] = ['home', 'work', 'friends', 'public', 'other'];
+export const COLOR_IDS: Color[] = ['brown', 'dark', 'light', 'yellow', 'green', 'red', 'black', 'grey'];

@@ -5,6 +5,7 @@ import { useSession } from '../session';
 import { useProfilePath } from '../users';
 import type { Poop } from '../types';
 import Avatar from './Avatar';
+import { ColorDot } from './ColorPicker';
 import Modal from './Modal';
 import ScorePill from './ScorePill';
 import TypeIcon from './TypeIcon';
@@ -78,6 +79,15 @@ export default function PoopDetail({ poop: p, onClose }: { poop: Poop; onClose: 
           <dt>{t('log.size')}</dt>
           <dd>{t(`size.${p.size}` as Key)}</dd>
         </div>
+        {p.color && (
+          <div>
+            <dt>{t('log.color')}</dt>
+            <dd>
+              <ColorDot color={p.color} />
+              {t(`color.${p.color}` as Key)}
+            </dd>
+          </div>
+        )}
         <div>
           <dt>{t('log.where')}</dt>
           <dd>{placeText(p, t)}</dd>
