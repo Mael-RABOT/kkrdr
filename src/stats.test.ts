@@ -62,6 +62,8 @@ describe('computeStats', () => {
     expect(s.places).toEqual({ work: 1, home: 3 });
     expect(s.types[4]).toBe(4);
     expect(s.avgDuration).toBe(10);
+    expect(s.sitter).toEqual({ userId: 'b', minutes: 10 });
+    expect(s.ranking.map((r) => r.sitTime)).toEqual([0, 10]);
   });
 
   it('handles an empty period', () => {
@@ -69,5 +71,6 @@ describe('computeStats', () => {
     expect(e.total).toBe(0);
     expect(e.days).toBe(2); // Monday 19 to Tuesday 20
     expect(e.streak).toBeNull();
+    expect(e.sitter).toBeNull();
   });
 });

@@ -17,6 +17,8 @@ export interface UserStats {
   longestStreak: number;
   maxInDay: number;
   avgRating: number | null;
+  /** Minutes spent on the toilet (entries with a duration). */
+  sitTime: number;
   points: number;
   avgScore: number;
   /** Leaderboard position (shared only on a full tie). */
@@ -33,6 +35,7 @@ export interface Stats {
   earliest: { userId: string; at: Date } | null;
   best: Poop | null;
   latest: { userId: string; at: Date } | null;
+  sitter: { userId: string; minutes: number } | null;
   hours: number[];
   places: Partial<Record<Place, number>>;
   sizes: Partial<Record<Size, number>>;
@@ -61,6 +64,11 @@ export function longestStreak(dates: Date[]): number {
 
 function avg(xs: number[]): number | null {
   return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+}
+
+/** Total minutes spent sitting, from the entries that have a duration. */
+export function sitTime(poops: Poop[]): number {
+  return poops.reduce((a, p) => a + (p.duration ?? 0), 0);
 }
 
 function minutesOfDay(d: Date) {
@@ -95,6 +103,7 @@ export function computeStats(poops: Poop[], start: Date | null, now = new Date()
       longestStreak: longestStreak(list.map((p) => p.at)),
       maxInDay,
       avgRating: avg(list.flatMap((p) => (p.rating != null ? [p.rating] : []))),
+      sitTime: sitTime(list),
       points: list.reduce((a, p) => a + score(p), 0),
       avgScore: list.reduce((a, p) => a + score(p), 0) / list.length,
       rank: 0,
@@ -107,6 +116,7 @@ export function computeStats(poops: Poop[], start: Date | null, now = new Date()
   ranking.sort((a, b) => ranked.get(a.userId)!.i - ranked.get(b.userId)!.i);
 
   const streakLeader = [...ranking].sort((a, b) => b.longestStreak - a.longestStreak)[0];
+  const sitLeader = [...ranking].sort((a, b) => b.sitTime - a.sitTime)[0];
 
   let earliest: Stats['earliest'] = null;
   let latest: Stats['latest'] = null;
@@ -130,6 +140,7 @@ export function computeStats(poops: Poop[], start: Date | null, now = new Date()
     ranking,
     streak: streakLeader ? { userId: streakLeader.userId, days: streakLeader.longestStreak } : null,
     busiestDay,
+    sitter: sitLeader?.sitTime ? { userId: sitLeader.userId, minutes: sitLeader.sitTime } : null,
     best: best(poops) ?? null,
     earliest,
     latest,

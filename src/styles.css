@@ -544,8 +544,14 @@ button.link.danger {
   gap: 10px;
   margin-top: 12px;
 }
-.tiles.two {
+.tiles.two,
+.tiles.four {
   grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 768px) {
+  .tiles.four {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 .tile {
   background: var(--surface);

@@ -5,7 +5,7 @@ import BarChart from '../components/BarChart';
 import PageHead from '../components/PageHead';
 import Segmented from '../components/Segmented';
 import Timeline from '../components/Timeline';
-import { fmtNum, fmtPts, timeOfDay } from '../format';
+import { fmtMinutes, fmtNum, fmtPts, timeOfDay } from '../format';
 import { score } from '../game';
 import { useT, type Key } from '../i18n';
 import { usePoops } from '../poops';
@@ -102,6 +102,8 @@ export default function Stats() {
                 <dd>{t('common.days', { n: mine?.longestStreak ?? 0 })}</dd>
                 <dt>{t('stats.mostInDay')}</dt>
                 <dd>{mine?.maxInDay ?? 0}</dd>
+                <dt>{t('stats.sitTime')}</dt>
+                <dd>{fmtMinutes(mine?.sitTime ?? 0)}</dd>
               </dl>
             </section>
 
@@ -115,6 +117,7 @@ export default function Stats() {
                     <Record label={t('stats.mostInDay')} value={s.busiestDay && String(s.busiestDay.count)} who={s.busiestDay && name(s.busiestDay.userId)} />
                     <Record label={t('stats.earliest')} value={s.earliest && timeOfDay(s.earliest.at)} who={s.earliest && name(s.earliest.userId)} />
                     <Record label={t('stats.latest')} value={s.latest && timeOfDay(s.latest.at)} who={s.latest && name(s.latest.userId)} />
+                    <Record wide label={t('stats.sitter')} value={s.sitter && fmtMinutes(s.sitter.minutes)} who={s.sitter && name(s.sitter.userId)} />
                   </div>
                 </section>
 

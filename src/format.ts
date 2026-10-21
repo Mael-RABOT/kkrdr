@@ -71,6 +71,14 @@ export function toLocalInput(d: Date): string {
   return `${dayKey(d)}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** A time in minutes: "45 min", "2 h", "2 h 05". */
+export function fmtMinutes(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
+}
+
 /** Points: no decimals when whole, one otherwise (scores move in steps of 0.5). */
 export function fmtPts(n: number | null | undefined): string {
   return n == null ? '–' : fmtNum(n, Number.isInteger(n) ? 0 : 1);

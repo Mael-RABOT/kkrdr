@@ -10,11 +10,12 @@ import ScorePill from '../components/ScorePill';
 import Timeline from '../components/Timeline';
 import { removeAvatar, setAvatar } from '../data';
 import { useDialogs } from '../dialogs';
-import { fmtNum, fmtPts, shortDate } from '../format';
+import { fmtMinutes, fmtNum, fmtPts, shortDate } from '../format';
 import { BADGES, score } from '../game';
 import { useT, type Key } from '../i18n';
 import { usePoops } from '../poops';
 import { useSession } from '../session';
+import { sitTime } from '../stats';
 import { findUser, nameKey, useProfilePath } from '../users';
 
 export default function Profile() {
@@ -54,7 +55,7 @@ export default function Profile() {
 
       {p && (
         <>
-          <div className="tiles">
+          <div className="tiles four">
             <div className="tile">
               <span className="tile-value">{fmtPts(p.points)}</span>
               <span className="tile-label">{t('stats.points')}</span>
@@ -66,6 +67,10 @@ export default function Profile() {
             <div className="tile">
               <span className="tile-value">{p.weekWins + p.monthWins}</span>
               <span className="tile-label">{t('tab.top')}</span>
+            </div>
+            <div className="tile">
+              <span className="tile-value">{fmtMinutes(sitTime(p.poops))}</span>
+              <span className="tile-label">{t('stats.sitTime')}</span>
             </div>
           </div>
 
