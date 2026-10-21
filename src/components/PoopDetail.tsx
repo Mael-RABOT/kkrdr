@@ -56,6 +56,7 @@ export default function PoopDetail({ poop: p, onClose }: { poop: Poop; onClose: 
             <small className="muted">
               {dayLabel(p.at)} · {timeOfDay(p.at)}
             </small>
+            {p.pending && <span className="pill pending">{t('common.pending')}</span>}
           </span>
         </Link>
         <ScorePill poop={p} big />

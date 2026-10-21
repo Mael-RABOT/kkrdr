@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import PageHead from '../components/PageHead';
+import { PageSpinner } from '../components/Spinner';
 import PoopForm from '../components/PoopForm';
 import { deletePoop, getPoop, updatePoop } from '../data';
 import { useDialogs } from '../dialogs';
+import { useFeed } from '../feed';
 import { useT } from '../i18n';
 import { useSession } from '../session';
 import type { Poop } from '../types';
@@ -14,10 +16,12 @@ export default function EditPoop() {
   const { id = '' } = useParams();
   const { me } = useSession();
   const navigate = useNavigate();
-  // undefined while loading, null when missing.
-  const [poop, setPoop] = useState<Poop | null | undefined>();
+  const { poops: feed } = useFeed();
+  // undefined while loading, null when missing. Opened from the feed, the entry is already in memory.
+  const [poop, setPoop] = useState<Poop | null | undefined>(() => feed?.find((p) => p.id === id));
 
   useEffect(() => {
+    if (poop?.id === id) return;
     getPoop(id).then(setPoop, () => setPoop(null));
   }, [id]);
 
@@ -32,7 +36,7 @@ export default function EditPoop() {
     back();
   }
 
-  if (poop === undefined) return <p className="muted">{t('common.loading')}</p>;
+  if (poop === undefined) return <PageSpinner label={t('common.loading')} />;
   if (poop === null) return <p className="muted">{t('log.notFound')}</p>;
   if (poop.userId !== me?.id) return <Navigate to="/" replace />;
 

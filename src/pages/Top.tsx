@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
+import { PageSpinner } from '../components/Spinner';
 import { fmtNum, fmtPts, monthLabel, shortDate } from '../format';
 import { awards, monthStart, netVotes, score, weekStart, type Award } from '../game';
 import { useT, type Key } from '../i18n';
@@ -101,7 +102,7 @@ export default function Top() {
     <>
       <PageHead title={t('top.title')} />
       {error && <p className="error">{error}</p>}
-      {!poops && !error && <p className="muted">{t('common.loading')}</p>}
+      {!poops && !error && <PageSpinner label={t('common.loading')} />}
 
       {poops && (
         <>

@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar';
 import Badge from '../components/Badge';
 import LevelBar from '../components/LevelBar';
 import PageHead from '../components/PageHead';
+import { PageSpinner } from '../components/Spinner';
 import PictureEditor from '../components/PictureEditor';
 import ScorePill from '../components/ScorePill';
 import Timeline from '../components/Timeline';
@@ -16,6 +17,7 @@ import { useT, type Key } from '../i18n';
 import { usePoops } from '../poops';
 import { useSession } from '../session';
 import { sitTime } from '../stats';
+import { useOnline } from '../useOnline';
 import { findUser, nameKey, useProfilePath } from '../users';
 
 export default function Profile() {
@@ -51,7 +53,7 @@ export default function Profile() {
         </div>
       </section>
 
-      {!poops && <p className="muted">{t('common.loading')}</p>}
+      {!poops && <PageSpinner label={t('common.loading')} />}
 
       {p && (
         <>
@@ -151,6 +153,8 @@ function PictureControls({ userId }: { userId: string }) {
   const dialogs = useDialogs();
   const has = useAvatar(userId) !== undefined;
   const refresh = useRefreshAvatar();
+  // Saving reads the picture back from the server, so it needs a connection.
+  const online = useOnline();
   const input = useRef<HTMLInputElement>(null);
   // The photo being framed in the editor.
   const [file, setFile] = useState<File | null>(null);
@@ -181,12 +185,12 @@ function PictureControls({ userId }: { userId: string }) {
           if (file) setFile(file);
         }}
       />
-      <button type="button" className="sm" onClick={() => input.current?.click()}>
+      <button type="button" className="sm" onClick={() => input.current?.click()} disabled={!online} title={online ? undefined : t('common.needsConnection')}>
         {has ? t('profile.changePic') : t('profile.addPic')}
       </button>
       {file && <PictureEditor file={file} onCancel={() => setFile(null)} onSave={save} />}
       {has && (
-        <button type="button" className="link danger" onClick={remove}>
+        <button type="button" className="link danger" onClick={remove} disabled={!online}>
           {t('profile.removePic')}
         </button>
       )}

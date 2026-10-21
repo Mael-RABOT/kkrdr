@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '../i18n';
+import Spinner from './Spinner';
 import { encodeCrop, loadImage, type Crop } from '../image';
 import Modal from './Modal';
 
@@ -153,7 +154,7 @@ export default function PictureEditor({ file, onCancel, onSave }: Props) {
           {t('common.cancel')}
         </button>
         <button type="button" className="primary" onClick={save} disabled={busy || !img}>
-          {busy ? t('profile.uploading') : t('profile.savePic')}
+          {busy ? <Spinner label={t('profile.uploading')} size="sm" show /> : t('profile.savePic')}
         </button>
       </div>
     </Modal>

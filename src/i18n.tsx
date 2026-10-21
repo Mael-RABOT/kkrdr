@@ -24,6 +24,14 @@ const en = {
   'common.confirm': 'Confirm',
   'common.error': 'Something went wrong',
   'common.edit': 'Edit',
+  'common.pending': 'Waiting to sync',
+  'common.pendingCount': '{n} to sync',
+  'common.needsConnection': 'You are offline. This needs a connection.',
+
+  'boot.slow': 'This is taking longer than usual.',
+  'boot.retry': 'Retry',
+  'boot.reset': 'Reset local data',
+  'boot.resetConfirm': 'Clears the data saved on this device and reloads. Entries logged offline and not synced yet will be lost. Your key stays linked.',
 
   'install.button': 'Install',
   'install.title': 'Install kkrdr',
@@ -53,6 +61,8 @@ const en = {
   'welcome.unreachable': 'Could not reach the database. Check your connection.',
   'welcome.revoked': 'Your access was revoked or your key changed. Ask an admin for a new key.',
   'welcome.deactivated': 'This account is deactivated.',
+  'welcome.offline': 'You are offline. Connect once to link this device; after that the app also works offline.',
+  'welcome.offlineFirstTime': 'You are offline. The first launch needs a connection.',
 
   'feed.title': 'Feed',
   'feed.empty': 'Nothing logged yet.',
@@ -302,6 +312,14 @@ const fr: Record<Key, string> = {
   'common.confirm': 'Confirmer',
   'common.error': 'Un problème est survenu',
   'common.edit': 'Modifier',
+  'common.pending': 'En attente de synchro',
+  'common.pendingCount': '{n} à synchroniser',
+  'common.needsConnection': 'Tu es hors ligne. Il faut une connexion pour ça.',
+
+  'boot.slow': 'Ça prend plus de temps que d’habitude.',
+  'boot.retry': 'Réessayer',
+  'boot.reset': 'Réinitialiser les données locales',
+  'boot.resetConfirm': 'Efface les données enregistrées sur cet appareil et recharge. Les entrées saisies hors ligne et pas encore synchronisées seront perdues. Ta clé reste liée.',
 
   'install.button': 'Installer',
   'install.title': 'Installer kkrdr',
@@ -331,6 +349,8 @@ const fr: Record<Key, string> = {
   'welcome.unreachable': 'Impossible de joindre la base de données. Vérifie ta connexion.',
   'welcome.revoked': 'Ton accès a été révoqué ou ta clé a changé. Demande une nouvelle clé à un admin.',
   'welcome.deactivated': 'Ce compte est désactivé.',
+  'welcome.offline': 'Tu es hors ligne. Connecte-toi une fois pour lier cet appareil, ensuite l’app marche aussi hors ligne.',
+  'welcome.offlineFirstTime': 'Tu es hors ligne. Le premier lancement nécessite une connexion.',
 
   'feed.title': 'Fil',
   'feed.empty': 'Rien pour le moment.',

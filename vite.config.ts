@@ -26,8 +26,18 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // The whole app shell is precached: it starts with no network at all.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,webmanifest}'],
         navigateFallback: '/index.html',
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            // Anything same-origin not precached (e.g. icons added later): cached on first use.
+            urlPattern: ({ sameOrigin, request }) => sameOrigin && ['image', 'font'].includes(request.destination),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'static-assets', expiration: { maxEntries: 60 } },
+          },
+        ],
       },
     }),
   ],

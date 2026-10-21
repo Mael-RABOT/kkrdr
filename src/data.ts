@@ -4,6 +4,7 @@ import {
   doc,
   getCountFromServer,
   getDoc,
+  getDocFromCache,
   getDocFromServer,
   getDocs,
   limit,
@@ -29,7 +30,10 @@ const poops = collection(db, 'poops');
 function toPoop(snap: DocumentSnapshot): Poop {
   // 'estimate' gives entries still waiting for the server a local createdAt.
   const d = snap.data({ serverTimestamps: 'estimate' }) as PoopDoc;
-  return { ...d, id: snap.id, at: d.at.toDate(), createdAt: d.createdAt?.toDate() };
+  const p: Poop = { ...d, id: snap.id, at: d.at.toDate(), createdAt: d.createdAt?.toDate() };
+  // Logged, edited or voted on this device and not on the server yet.
+  if (snap.metadata.hasPendingWrites) p.pending = true;
+  return p;
 }
 
 export type NewPoop = Omit<Poop, 'id' | 'userId' | 'createdAt'>;
@@ -52,8 +56,10 @@ export function updatePoop(id: string, p: NewPoop) {
   return updateDoc(doc(poops, id), data);
 }
 
-/** One entry, or null if it does not exist (served from the local cache when offline). */
+/** One entry, or null if it does not exist. The local cache answers first, so a bad connection doesn't stall. */
 export async function getPoop(id: string): Promise<Poop | null> {
+  const cached = await getDocFromCache(doc(poops, id)).catch(() => null);
+  if (cached?.exists()) return toPoop(cached);
   const snap = await getDoc(doc(poops, id));
   return snap.exists() ? toPoop(snap) : null;
 }
@@ -65,16 +71,19 @@ export function deletePoop(id: string) {
 export function subscribeAll(cb: (p: Poop[]) => void, onError: (e: Error) => void) {
   return onSnapshot(
     query(poops, orderBy('at', 'desc')),
+    // Metadata changes too, so the pending flag clears once the server has the entry.
+    { includeMetadataChanges: true },
     (snap) => cb(snap.docs.map(toPoop)),
     onError,
   );
 }
 
 /** The newest n entries by the given field, live. */
-export function subscribeRecent(n: number, sort: FeedSort, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
+export function subscribeRecent(n: number, sort: FeedSort, cb: (p: Poop[], fromServer: boolean) => void, onError: (e: Error) => void) {
   return onSnapshot(
     query(poops, orderBy(sort, 'desc'), limit(n)),
-    (snap) => cb(snap.docs.map(toPoop)),
+    { includeMetadataChanges: true },
+    (snap) => cb(snap.docs.map(toPoop), !snap.metadata.fromCache),
     onError,
   );
 }
@@ -83,6 +92,7 @@ export function subscribeRecent(n: number, sort: FeedSort, cb: (p: Poop[]) => vo
 export function subscribeSince(since: Date, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
   return onSnapshot(
     query(poops, where('at', '>=', Timestamp.fromDate(since))),
+    { includeMetadataChanges: true },
     (snap) => cb(snap.docs.map(toPoop)),
     onError,
   );
@@ -103,11 +113,19 @@ function avatarUrl(d: { img: Bytes; type: string }) {
 
 /** Every profile picture as a data URL, by user id, live. */
 export function subscribeAvatars(cb: (m: Map<string, string>) => void, onError: (e: Error) => void) {
+  // Base64-encoding every picture on each snapshot is wasted work: reuse unchanged ones.
+  const memo = new Map<string, { version: number; url: string }>();
   return onSnapshot(
     avatars,
     (snap) => {
       const m = new Map<string, string>();
-      snap.forEach((d) => m.set(d.id, avatarUrl(d.data() as { img: Bytes; type: string })));
+      snap.forEach((d) => {
+        const data = d.data({ serverTimestamps: 'estimate' }) as { img: Bytes; type: string; updatedAt?: Timestamp };
+        const version = data.updatedAt?.toMillis() ?? 0;
+        let hit = memo.get(d.id);
+        if (!hit || hit.version !== version) memo.set(d.id, (hit = { version, url: avatarUrl(data) }));
+        m.set(d.id, hit.url);
+      });
       cb(m);
     },
     onError,

@@ -2,6 +2,13 @@
 
 Pronounced /ka.kaʁ.de.œʁ/ ("Ca Car D'heure", roughly "kah-kar-day-ur"), KKRDR gives you a precise log of you & your friends poops.
 
+## Deploy your own (no coding needed)
+
+Want kkrdr for your group of friends? Follow the step-by-step guide. It goes from creating a GitHub account to everyone having the app on their phone, all in the browser and on free plans:
+
+- 🇬🇧 [Deployment guide (English)](docs/deploy-guide.en.md)
+- 🇫🇷 [Guide de déploiement (français)](docs/deploy-guide.fr.md)
+
 ## How access works
 
 There is no sign-in. Each person gets a personal key (or an invite link containing it) from an admin.
@@ -24,15 +31,20 @@ Firestore collections: `users`, `keys` (doc id = the secret key), `sessions`, `p
    npx firebase deploy --only firestore:rules,firestore:indexes
    ```
 5. Create the first admin: `npm run create-admin`. It uses the config from `.env`, asks for a username and a key (leave it empty to generate one), and prints your invite link. It only works once (until `config/setup` exists), so run it right after deploying the rules. Everyone else is added from the Admin tab.
-6. Deploy the app:
+6. Deploy the app (also redeploys rules and indexes):
    ```sh
-   npm run build
-   npx firebase deploy --only hosting
+   npm run deploy
    ```
 
 ## Install on your phone
 
-kkrdr is a PWA: once installed it opens full screen like an app, and keeps working offline. Entries logged without a connection sync when you're back online.
+kkrdr is a PWA: once installed it opens full screen like an app, and keeps working offline.
+
+- The app opens straight away from the last known session, and the data is refreshed in the background. You never wait for the network on startup.
+- Once the app has been opened online, the full history is fetched in the background, so the Feed, Top, Stats and profiles all work offline.
+- Entries logged, edited or voted on without a connection show **Waiting to sync** and are sent as soon as you're back online. The header shows how many are pending.
+- Actions that need the server (linking a key, Admin, profile pictures) are disabled while offline.
+- If startup takes more than 8 seconds, the app offers **Retry** and **Reset local data**. Reset clears the on-device cache but keeps the device linked.
 
 - **Android (Chrome):** open the site, then menu (three dots) > **Install app**.
 - **iPhone (Safari):** open the site, then **Share** > **Add to Home Screen**.

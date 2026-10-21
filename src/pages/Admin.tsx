@@ -5,13 +5,16 @@ import PageHead from '../components/PageHead';
 import { countPoops, createUser, inviteLink, keysFor, regenerateKey, removeUser, revokeKeys, updateUser } from '../data';
 import { useDialogs } from '../dialogs';
 import { useT } from '../i18n';
+import { usePoops } from '../poops';
 import { useSession } from '../session';
+import { useOnline } from '../useOnline';
 import type { User } from '../types';
 import { nameTaken, useProfilePath } from '../users';
 
 export default function Admin() {
   const t = useT();
   const { users } = useSession();
+  const online = useOnline();
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,12 +50,13 @@ export default function Admin() {
   return (
     <>
       <PageHead title={t('admin.title')} />
+      {!online && <p className="hint">{t('common.needsConnection')}</p>}
 
       <section className="card">
         <h2>{t('admin.add')}</h2>
         <form onSubmit={onAdd} className="row">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('admin.name')} maxLength={30} />
-          <button className="primary" disabled={busy || !name.trim()}>
+          <button className="primary" disabled={busy || !online || !name.trim()}>
             {t('admin.addBtn')}
           </button>
         </form>
@@ -73,7 +77,7 @@ export default function Admin() {
             <UserRow
               key={u.id}
               user={u}
-              busy={busy}
+              busy={busy || !online}
               run={run}
               shownKey={shown?.userId === u.id ? shown.key : undefined}
               setShown={(key) => setShown({ userId: u.id, key })}
@@ -102,12 +106,17 @@ function UserRow({
   const dialogs = useDialogs();
   const profilePath = useProfilePath();
   const { me } = useSession();
-  const [count, setCount] = useState<number | null>(null);
+  const { poops, players } = usePoops();
+  const loaded = poops !== null;
+  const [serverCount, setServerCount] = useState<number | null>(null);
+  // Counted from the local history once it is loaded; the server count only fills the gap before that.
+  const local = loaded ? (players.get(user.id)?.poops.length ?? 0) : undefined;
+  const count = local ?? serverCount;
   const self = user.id === me?.id;
 
   useEffect(() => {
-    countPoops(user.id).then(setCount, () => setCount(null));
-  }, [user.id]);
+    if (!loaded) countPoops(user.id).then(setServerCount, () => setServerCount(null));
+  }, [user.id, loaded]);
 
   return (
     <li className={user.active ? '' : 'inactive'}>

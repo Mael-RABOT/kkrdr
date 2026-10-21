@@ -1,0 +1,12 @@
+{
+  // Used by GitHub Codespaces: a ready-to-use terminal in the browser, nothing to install.
+  // See docs/deploy-guide.en.md.
+  "name": "kkrdr",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "npm ci",
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["docs/deploy-guide.en.md"]
+    }
+  }
+}

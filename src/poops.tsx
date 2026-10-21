@@ -15,8 +15,9 @@ interface PoopsCtx {
 const Ctx = createContext<PoopsCtx | null>(null);
 
 /**
- * The full history, needed by Top, Stats and profiles. It is only subscribed to once one of
- * those pages is opened (the feed pages through recent entries on its own), then kept live.
+ * The full history, needed by Top, Stats and profiles. It is subscribed to once one of those pages
+ * is opened, or in the background once the app is idle, so all of it is in the local cache for
+ * offline use. Then kept live.
  */
 export function PoopsProvider({ children }: { children: ReactNode }) {
   const { users } = useSession();
@@ -26,10 +27,26 @@ export function PoopsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => (active ? subscribeAll(setPoops, (e) => setError(e.message)) : undefined), [active]);
 
+  // Prefetch when the app has nothing else to do.
+  useEffect(() => {
+    if ('requestIdleCallback' in window) {
+      const id = requestIdleCallback(() => setActive(true), { timeout: 5_000 });
+      return () => cancelIdleCallback(id);
+    }
+    const id = setTimeout(() => setActive(true), 3_000);
+    return () => clearTimeout(id);
+  }, []);
+
   const all = useMemo(() => players(poops ?? [], users.keys()), [poops, users]);
   const activate = useMemo(() => () => setActive(true), []);
 
   return <Ctx.Provider value={{ poops, error, players: all, activate }}>{children}</Ctx.Provider>;
+}
+
+/** Entries changed on this device and not synced yet (0 until the history is loaded). */
+export function usePendingCount() {
+  const c = useContext(Ctx);
+  return useMemo(() => c?.poops?.filter((p) => p.pending).length ?? 0, [c?.poops]);
 }
 
 export function usePoops() {

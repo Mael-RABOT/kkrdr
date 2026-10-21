@@ -2,13 +2,16 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import InstallButton from '../components/InstallButton';
 import LangSwitch from '../components/LangSwitch';
+import Spinner from '../components/Spinner';
 import ThemeSwitch from '../components/ThemeSwitch';
 import { useT, type Key } from '../i18n';
 import { useSession } from '../session';
+import { useOnline } from '../useOnline';
 
 export default function Welcome() {
   const t = useT();
   const { authReady, error, link } = useSession();
+  const online = useOnline();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [key, setKey] = useState(params.get('key') ?? '');
@@ -30,10 +33,10 @@ export default function Welcome() {
     }
   }
 
-  // Invite links carry ?key=..., link automatically once auth is ready.
+  // Invite links carry ?key=..., link automatically once auth is ready and the device is online.
   useEffect(() => {
     const k = params.get('key');
-    if (k && authReady && !autoTried.current) {
+    if (k && authReady && online && !autoTried.current) {
       autoTried.current = true;
       void submit(k);
     }
@@ -62,10 +65,11 @@ export default function Welcome() {
             spellCheck={false}
             autoComplete="off"
           />
-          <button className="primary big" disabled={busy || !authReady || !key.trim()}>
-            {busy ? t('welcome.checking') : t('welcome.continue')}
+          <button className="primary big" disabled={busy || !authReady || !online || !key.trim()}>
+            {busy ? <Spinner label={t('welcome.checking')} size="sm" show /> : t('welcome.continue')}
           </button>
         </form>
+        {!online && <p className="hint">{t('welcome.offline')}</p>}
         {(msg ?? error) && <p className="error">{t((msg ?? error) as Key)}</p>}
         <div className="welcome-lang head-controls">
           <InstallButton />

@@ -5,40 +5,30 @@ import PageHead from '../components/PageHead';
 import PoopDetail, { placeText } from '../components/PoopDetail';
 import ScorePill from '../components/ScorePill';
 import Segmented from '../components/Segmented';
+import Spinner, { PageSpinner } from '../components/Spinner';
 import VoteButtons from '../components/VoteButtons';
-import { deletePoop, subscribeRecent, subscribeSince, type FeedSort } from '../data';
+import { deletePoop } from '../data';
 import { dayKey, dayLabel, fmtPts, relative } from '../format';
-import { awards, weekStart } from '../game';
+import { awards } from '../game';
 import { useDialogs } from '../dialogs';
+import { useFeed } from '../feed';
 import { useT, type Key } from '../i18n';
-import { readPref, writePref } from '../prefs';
 import { useSession } from '../session';
 import { useProfilePath } from '../users';
 import type { Poop } from '../types';
-
-const PAGE = 20;
 
 export default function Feed() {
   const t = useT();
   const profilePath = useProfilePath();
   const dialogs = useDialogs();
   const { me, users } = useSession();
-  const [sort, setSortState] = useState<FeedSort>(() => (readPref('feedSort') === 'createdAt' ? 'createdAt' : 'at'));
-  const [limit, setLimit] = useState(PAGE);
-  const [poops, setPoops] = useState<Poop[] | null>(null);
-  const [week, setWeek] = useState<Poop[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { sort, setSort, poops, week, error, limit, more } = useFeed();
   const [, tick] = useState(0);
   // The entry open in the popup; looked up in the live list so votes update in place.
   const [openId, setOpenId] = useState<string | null>(null);
   const open = openId ? poops?.find((p) => p.id === openId) : undefined;
   const navigate = useNavigate();
   const sentinel = useRef<HTMLDivElement>(null);
-
-  // Newest `limit` entries; the limit grows as you scroll (already loaded ones come from the local cache).
-  useEffect(() => subscribeRecent(limit, sort, setPoops, (e) => setError(e.message)), [limit, sort]);
-  // This week's entries, for the leader banner.
-  useEffect(() => subscribeSince(weekStart(new Date()), setWeek, () => {}), []);
 
   const hasMore = poops !== null && poops.length >= limit;
 
@@ -48,13 +38,13 @@ export default function Feed() {
     if (!el || !hasMore) return;
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) setLimit((n) => (poops && poops.length >= n ? n + PAGE : n));
+        if (entries.some((e) => e.isIntersecting) && poops && poops.length >= limit) more();
       },
       { rootMargin: '400px' },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [hasMore, poops]);
+  }, [hasMore, poops, limit, more]);
 
   // Refresh relative times every minute.
   useEffect(() => {
@@ -69,14 +59,6 @@ export default function Feed() {
     { value: 'createdAt' as const, label: t('feed.sortPosted') },
   ];
 
-  function setSort(v: FeedSort) {
-    if (v === sort) return;
-    setSortState(v);
-    writePref('feedSort', v);
-    setLimit(PAGE);
-    setPoops(null);
-  }
-
   async function remove(p: Poop) {
     const ok = await dialogs.confirm({ title: t('feed.deleteTitle'), message: t('feed.confirmDelete'), confirmLabel: t('common.delete'), danger: true });
     if (!ok) return;
@@ -88,7 +70,7 @@ export default function Feed() {
     <>
       <PageHead title={t('feed.title')} />
       {error && <p className="error">{error}</p>}
-      {!poops && !error && <p className="muted">{t('common.loading')}</p>}
+      {!poops && !error && <PageSpinner label={t('common.loading')} />}
 
       {leader && (
         <Link to="/top" className="leader-banner">
@@ -153,6 +135,7 @@ export default function Feed() {
                   </span>
                 </div>
                 <div className="tags">
+                  {p.pending && <span className="pill pending">{t('common.pending')}</span>}
                   {p.perfect ? (
                     <span className="pill perfect">{t('feed.perfect')}</span>
                   ) : (
@@ -186,7 +169,7 @@ export default function Feed() {
       {open && <PoopDetail poop={open} onClose={() => setOpenId(null)} />}
       {hasMore && (
         <div ref={sentinel} className="feed-more muted">
-          {t('common.loading')}
+          <Spinner label={t('common.loading')} size="sm" />
         </div>
       )}
     </>

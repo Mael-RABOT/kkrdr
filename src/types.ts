@@ -29,9 +29,11 @@ export interface Poop {
   perfect?: boolean;
   /** When it was posted (server time). */
   createdAt?: Date;
+  /** Local changes not synced yet (client only, never stored). */
+  pending?: boolean;
 }
 
-export interface PoopDoc extends Omit<Poop, 'id' | 'at' | 'createdAt'> {
+export interface PoopDoc extends Omit<Poop, 'id' | 'at' | 'createdAt' | 'pending'> {
   at: Timestamp;
   createdAt?: Timestamp | null;
 }

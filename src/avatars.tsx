@@ -1,5 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { fetchAvatar, subscribeAvatars } from './data';
+import { readLocal, writeLocal } from './localCache';
+
+const CACHE = 'avatars-cache';
 
 interface AvatarsCtx {
   avatars: Map<string, string>;
@@ -11,8 +14,15 @@ const Ctx = createContext<AvatarsCtx>({ avatars: new Map(), refresh: async () =>
 
 /** Profile pictures by user id (data URLs). Mounted once signed in. */
 export function AvatarsProvider({ children }: { children: ReactNode }) {
-  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
-  useEffect(() => subscribeAvatars(setAvatars, () => {}), []);
+  const [avatars, setAvatars] = useState<Map<string, string>>(() => new Map(readLocal<[string, string][]>(CACHE) ?? []));
+  useEffect(
+    () =>
+      subscribeAvatars((m) => {
+        setAvatars(m);
+        writeLocal(CACHE, [...m]);
+      }, () => {}),
+    [],
+  );
 
   const refresh = useCallback(async (userId: string) => {
     const url = await fetchAvatar(userId);

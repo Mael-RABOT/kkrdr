@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import BarChart from '../components/BarChart';
 import PageHead from '../components/PageHead';
+import { PageSpinner } from '../components/Spinner';
 import Segmented from '../components/Segmented';
 import Timeline from '../components/Timeline';
 import { fmtMinutes, fmtNum, fmtPts, timeOfDay } from '../format';
@@ -41,7 +42,7 @@ export default function Stats() {
       <Segmented options={periods} value={period} onChange={(v) => v && setPeriod(v)} variant="pills" />
 
       {error && <p className="error mt">{error}</p>}
-      {!s && !error && <p className="muted">{t('common.loading')}</p>}
+      {!s && !error && <PageSpinner label={t('common.loading')} />}
 
       {s && (
         <>

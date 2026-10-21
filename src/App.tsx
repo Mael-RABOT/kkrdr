@@ -1,8 +1,12 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { useDialogs } from './dialogs';
 import { useT } from './i18n';
 import { AvatarsProvider } from './avatars';
+import { FeedProvider } from './feed';
+import { resetLocalData } from './firebase';
 import { PoopsProvider } from './poops';
 import { useSession } from './session';
+import Spinner from './components/Spinner';
 import TabBar from './components/TabBar';
 import Welcome from './pages/Welcome';
 import Feed from './pages/Feed';
@@ -14,12 +18,11 @@ import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 
 export default function App() {
-  const t = useT();
-  const { status, me } = useSession();
+  const { status, slow, me } = useSession();
   const location = useLocation();
   const hasKeyParam = new URLSearchParams(location.search).has('key');
 
-  if (status === 'loading' && !hasKeyParam) return <div className="center muted">{t('common.loading')}</div>;
+  if (status === 'loading' && !hasKeyParam) return <Boot slow={slow} />;
 
   if (status !== 'ready' || hasKeyParam) {
     return (
@@ -31,21 +34,52 @@ export default function App() {
 
   return (
     <PoopsProvider>
-      <AvatarsProvider>
-        <main className="page">
-          <Routes>
-            <Route path="/" element={<Feed />} />
-            <Route path="/new" element={<NewPoop />} />
-            <Route path="/edit/:id" element={<EditPoop />} />
-            <Route path="/top" element={<Top />} />
-            <Route path="/stats" element={<Stats />} />
-            <Route path="/u/:name" element={<Profile />} />
-            {me?.admin && <Route path="/admin" element={<Admin />} />}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-        <TabBar />
-      </AvatarsProvider>
+      <FeedProvider>
+        <AvatarsProvider>
+          <main className="page">
+            <Routes>
+              <Route path="/" element={<Feed />} />
+              <Route path="/new" element={<NewPoop />} />
+              <Route path="/edit/:id" element={<EditPoop />} />
+              <Route path="/top" element={<Top />} />
+              <Route path="/stats" element={<Stats />} />
+              <Route path="/u/:name" element={<Profile />} />
+              {me?.admin && <Route path="/admin" element={<Admin />} />}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          <TabBar />
+        </AvatarsProvider>
+      </FeedProvider>
     </PoopsProvider>
+  );
+}
+
+/** Startup screen. If it lasts, offer a way out instead of spinning forever. */
+function Boot({ slow }: { slow: boolean }) {
+  const t = useT();
+  const dialogs = useDialogs();
+
+  async function reset() {
+    const ok = await dialogs.confirm({ title: t('boot.reset'), message: t('boot.resetConfirm'), confirmLabel: t('boot.reset'), danger: true });
+    if (ok) await resetLocalData();
+  }
+
+  return (
+    <main className="boot muted">
+      <img src="/pwa-192x192.png" alt="" width={72} height={72} />
+      <Spinner label={t('common.loading')} size="lg" />
+      {slow && (
+        <>
+          <p>{t('boot.slow')}</p>
+          <div className="row">
+            <button onClick={() => location.reload()}>{t('boot.retry')}</button>
+            <button className="danger" onClick={reset}>
+              {t('boot.reset')}
+            </button>
+          </div>
+        </>
+      )}
+    </main>
   );
 }
