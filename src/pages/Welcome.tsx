@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import AppVersion from '../components/AppVersion';
 import InstallButton from '../components/InstallButton';
 import LangSwitch from '../components/LangSwitch';
 import Spinner from '../components/Spinner';
@@ -75,6 +76,7 @@ export default function Welcome() {
           <InstallButton />
           <ThemeSwitch />
           <LangSwitch />
+          <AppVersion />
         </div>
       </div>
     </main>

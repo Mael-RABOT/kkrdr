@@ -889,6 +889,12 @@ button.link.danger {
   align-items: center;
   gap: 6px;
 }
+.app-version {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 .icon-switch,
 .install-btn {
   display: inline-flex;

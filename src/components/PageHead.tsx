@@ -1,6 +1,7 @@
 import { useT } from '../i18n';
 import { usePendingCount } from '../poops';
 import { useOnline } from '../useOnline';
+import AppVersion from './AppVersion';
 import InstallButton from './InstallButton';
 import LangSwitch from './LangSwitch';
 import ThemeSwitch from './ThemeSwitch';
@@ -22,6 +23,7 @@ export default function PageHead({ title }: { title: string }) {
           <InstallButton />
           <ThemeSwitch />
           <LangSwitch />
+          <AppVersion />
         </span>
       </div>
       <h1>{title}</h1>
