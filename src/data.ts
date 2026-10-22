@@ -158,7 +158,7 @@ export function newKey(): string {
 }
 
 export function inviteLink(key: string) {
-  return `${location.origin}/welcome?key=${key}`;
+  return `${location.origin}/?key=${key}`;
 }
 
 export async function createUser(name: string): Promise<string> {

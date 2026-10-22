@@ -70,7 +70,7 @@ Against the emulators (no Firebase project needed, needs Java):
 ```sh
 npm run emulators      # terminal 1
 npm run seed           # terminal 2: users Admin/Sam/Lou with keys adminkey/samkey/loukey + sample data
-npm run dev:emu        # then open http://localhost:5173/welcome?key=adminkey
+npm run dev:emu        # then open http://localhost:5173/?key=adminkey
 ```
 
 Against the real project: put the config in `.env.local` and run `npm run dev`.

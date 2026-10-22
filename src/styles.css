@@ -493,6 +493,18 @@ button.link.danger {
 .form-when {
   order: 1;
 }
+/* iOS Safari gives date inputs a native width that ignores width: 100% and overflows narrow screens. */
+.form-when input[type='datetime-local'] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 48px;
+}
+.form-when input[type='datetime-local']::-webkit-date-and-time-value {
+  text-align: left;
+}
 .form-what {
   order: 2;
 }

@@ -81,7 +81,8 @@ service cloud.firestore {
         && d.keys().hasOnly(['userId', 'at', 'type', 'size', 'place', 'placeNote',
                              'duration', 'rating', 'color', 'note', 'createdAt', 'votes', 'perfect'])
         && d.at is timestamp
-        && d.at <= request.time + duration.value(5, 'm')
+        // Generous margin: a phone clock or time zone set wrong must not block logging (the app checks too).
+        && d.at <= request.time + duration.value(1, 'd')
         && d.type is int && d.type >= 1 && d.type <= 7
         && d.size in ['S', 'M', 'L', 'XL']
         && d.place in ['home', 'work', 'friends', 'public', 'other']

@@ -27,7 +27,7 @@ export default function Welcome() {
       navigate('/', { replace: true });
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e));
-      navigate('/welcome', { replace: true });
+      navigate('/', { replace: true });
     } finally {
       setBusy(false);
     }

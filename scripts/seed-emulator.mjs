@@ -59,4 +59,4 @@ for (let day = 0; day < 45; day++) {
   }
 }
 console.log(`Seeded ${people.length} users and ${n} entries.`);
-console.log('Open http://localhost:5173/welcome?key=adminkey');
+console.log('Open http://localhost:5173/?key=adminkey');

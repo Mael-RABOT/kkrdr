@@ -46,6 +46,9 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
     const date = new Date(at);
     if (Number.isNaN(date.getTime())) return setError(t('log.invalidTime'));
     if (date.getTime() > Date.now() + 60_000) return setError(t('log.futureTime'));
+    // iOS lets type="number" fields hold any text ("2,5", "5 min"): NaN would be refused by the rules.
+    const mins = duration.trim() ? Number(duration.replace(',', '.')) : undefined;
+    if (mins !== undefined && !Number.isFinite(mins)) return setError(t('log.invalidDuration'));
     setBusy(true);
     onSave({
       at: date,
@@ -54,7 +57,7 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
       size,
       place,
       placeNote: placeNote.trim() || undefined,
-      duration: duration ? Math.min(180, Math.max(0, Math.round(Number(duration)))) : undefined,
+      duration: mins !== undefined ? Math.min(180, Math.max(0, Math.round(mins))) : undefined,
       rating: perfect ? 5 : rating,
       color,
       perfect: perfect || undefined,

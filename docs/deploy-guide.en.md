@@ -172,7 +172,7 @@ It prints something like:
 ```
 Created admin "Alex"
 Key: k7m2...
-Online: https://kkrdr-myfriends.web.app/welcome?key=k7m2...
+Online: https://kkrdr-myfriends.web.app/?key=k7m2...
 ```
 
 **Copy the `Online:` link and keep it safe.** It's your personal login link. Anyone with it can use the app as you.
@@ -222,6 +222,6 @@ Everyone's app shows **"A new version is available"** with a **Reload** button.
 | `VITE_FIREBASE_API_KEY missing from .env` | `.env.local` isn't filled in or saved. See step 8. |
 | `PERMISSION_DENIED` during `create-admin` | The rules aren't installed. Run `npm run deploy` first (step 11). |
 | `configuration-not-found` | Anonymous sign-in is off. See step 6. |
-| `An admin was already created` | `create-admin` already ran. Use your link from step 12. If you lost it, in the Firebase console open **Firestore Database** → `config` → `setup` to find the `key`, then open `https://<project-id>.web.app/welcome?key=<key>`. |
+| `An admin was already created` | `create-admin` already ran. Use your link from step 12. If you lost it, in the Firebase console open **Firestore Database** → `config` → `setup` to find the `key`, then open `https://<project-id>.web.app/?key=<key>`. |
 | The site says "Could not reach the database" | Check the values in `.env.local` (step 8), then run `npm run deploy` again. |
 | "Unknown key" | The link was regenerated or revoked. Ask an admin for a new one. |

@@ -67,8 +67,8 @@ async function main() {
 
     console.log(`\nCreated admin "${name}"`);
     console.log(`Key: ${key}`);
-    console.log(`Local:  http://localhost:5173/welcome?key=${key}`);
-    console.log(`Online: https://${projectId}.web.app/welcome?key=${key}  (after deploying hosting)`);
+    console.log(`Local:  http://localhost:5173/?key=${key}`);
+    console.log(`Online: https://${projectId}.web.app/?key=${key}  (after deploying hosting)`);
   } finally {
     await terminate(db);
   }

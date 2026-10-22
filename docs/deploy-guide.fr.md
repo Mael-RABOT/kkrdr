@@ -172,7 +172,7 @@ npm run create-admin
 ```
 Created admin "Alex"
 Key: k7m2...
-Online: https://kkrdr-mespotes.web.app/welcome?key=k7m2...
+Online: https://kkrdr-mespotes.web.app/?key=k7m2...
 ```
 
 **Copie le lien `Online:` et garde-le précieusement.** C'est ton lien de connexion personnel : n'importe qui l'ayant peut utiliser l'appli en se faisant passer pour toi.
@@ -222,6 +222,6 @@ L'appli de chacun affiche **« Une nouvelle version est disponible »** avec un 
 | `VITE_FIREBASE_API_KEY missing from .env` | `.env.local` n'est pas rempli ou pas enregistré. Voir l'étape 8. |
 | `PERMISSION_DENIED` pendant `create-admin` | Les règles ne sont pas installées. Lance d'abord `npm run deploy` (étape 11). |
 | `configuration-not-found` | La connexion anonyme est désactivée. Voir l'étape 6. |
-| `An admin was already created` | `create-admin` a déjà été lancé. Utilise ton lien de l'étape 12. Si tu l'as perdu, dans la console Firebase ouvre **Firestore Database** → `config` → `setup` pour retrouver la `key`, puis ouvre `https://<id-du-projet>.web.app/welcome?key=<key>`. |
+| `An admin was already created` | `create-admin` a déjà été lancé. Utilise ton lien de l'étape 12. Si tu l'as perdu, dans la console Firebase ouvre **Firestore Database** → `config` → `setup` pour retrouver la `key`, puis ouvre `https://<id-du-projet>.web.app/?key=<key>`. |
 | Le site dit « Impossible de joindre la base de données » | Vérifie les valeurs dans `.env.local` (étape 8), puis relance `npm run deploy`. |
 | « Clé inconnue » | Le lien a été régénéré ou révoqué. Demande-en un nouveau à un admin. |
