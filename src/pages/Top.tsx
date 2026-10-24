@@ -1,13 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
+import RecordTile from '../components/RecordTile';
+import Segmented from '../components/Segmented';
 import { PageSpinner } from '../components/Spinner';
-import { fmtNum, fmtPts, monthLabel, shortDate } from '../format';
-import { awards, monthStart, netVotes, score, weekStart, type Award } from '../game';
-import { useT, type Key } from '../i18n';
+import { fmtMinutes, fmtNum, fmtPts, monthLabel, shortDate, timeOfDay } from '../format';
+import { awards, monthStart, netVotes, score, weekStart, type Award, type PeriodKind } from '../game';
+import { useT, type Key, type T } from '../i18n';
 import { usePoops } from '../poops';
+import { categoriesWon, periodEnd, POOP_POINTS, poopPoints, REPORTS_FROM } from '../reports';
+import { useReports } from '../reportsProvider';
 import { useSession } from '../session';
+import { CATEGORIES, periodWinners, type Category, type CategoryWin, type Winners } from '../stats';
+import { useSince } from '../useSince';
 import { useProfilePath } from '../users';
 
 function Trophy() {
@@ -59,73 +65,152 @@ function HeroAward({ award, title, period }: { award: Award | undefined; title: 
   );
 }
 
-function SmallAward({ award, label }: { award: Award; label: string }) {
+const LABELS: Record<Category, Key> = {
+  points: 'top.mostPoints',
+  best: 'stats.bestPoop',
+  streak: 'stats.longestStreak',
+  busiestDay: 'stats.mostInDay',
+  earliest: 'stats.earliest',
+  latest: 'stats.latest',
+  sitter: 'stats.sitter',
+};
+
+function categoryValue(c: Category, v: number, t: T): string {
+  switch (c) {
+    case 'points':
+      return fmtPts(v);
+    case 'best':
+      return fmtNum(v);
+    case 'streak':
+      return t('common.days', { n: v });
+    case 'earliest':
+    case 'latest':
+      return timeOfDay(new Date(2000, 0, 1, Math.floor(v / 60), v % 60));
+    case 'sitter':
+      return fmtMinutes(v);
+    default:
+      return String(v);
+  }
+}
+
+/** One tile per category with its winners (everyone tied). With `reward`, the poop points each of them got. */
+function Categories({ winners, reward }: { winners: Winners; reward?: number }) {
   const t = useT();
-  const profilePath = useProfilePath();
   const { users } = useSession();
-  const name = users.get(award.userId)?.name ?? t('common.unknown');
+  const names = (w: CategoryWin) => w.userIds.map((id) => users.get(id)?.name ?? t('common.unknown')).join(', ');
   return (
-    <Link to={profilePath(award.userId)} className="tile small-award">
-      <span className="tile-label">{label}</span>
-      <span className="small-award-row">
-        <Avatar id={award.userId} name={name} size={28} />
-        <span className="lb-name">{name}</span>
-        <span className="small-award-score">{fmtPts(award.points)}</span>
-      </span>
-    </Link>
+    <div className="tiles two">
+      {CATEGORIES.map((c) => {
+        const w = winners[c];
+        return (
+          <RecordTile
+            key={c}
+            wide={c === 'points'}
+            label={t(LABELS[c])}
+            value={w ? categoryValue(c, w.value, t) : null}
+            who={w ? names(w) : null}
+            extra={w && reward ? `💩 +${reward}` : undefined}
+          />
+        );
+      })}
+    </div>
   );
+}
+
+interface HallRow {
+  start: Date;
+  userIds: string[];
+  points: number;
+  /** Categories won by the points winner (periods with a report). */
+  categories?: number;
+  /** Entries logged by the winner (older periods, from the history). */
+  count?: number;
 }
 
 export default function Top() {
   const t = useT();
   const profilePath = useProfilePath();
   const { users } = useSession();
-  const { poops, error } = usePoops();
-
-  const weeks = useMemo(() => (poops ? awards(poops, 'week') : []), [poops]);
-  const months = useMemo(() => (poops ? awards(poops, 'month') : []), [poops]);
+  const reports = useReports();
+  const [kind, setKind] = useState<PeriodKind>('week');
+  const tabs = [
+    { value: 'week' as const, label: t('top.tabWeek') },
+    { value: 'month' as const, label: t('top.tabMonth') },
+  ];
 
   const now = new Date();
-  const thisWeek = weeks[0] && !weeks[0].final ? weeks[0] : undefined;
-  const thisMonth = months[0] && !months[0].final ? months[0] : undefined;
-  const pastWeeks = weeks.filter((a) => a.final);
-  const pastMonths = months.filter((a) => a.final);
+  const start = (kind === 'week' ? weekStart : monthStart)(now);
+  const lastDay = periodEnd(kind, start);
+  lastDay.setDate(lastDay.getDate() - 1);
+  const label = (d: Date) => (kind === 'week' ? t('top.weekOf', { date: shortDate(d) }) : monthLabel(d));
 
-  const weekEnd = new Date(weekStart(now));
-  weekEnd.setDate(weekEnd.getDate() + 6);
+  // The running period: its own entries only.
+  const running = useSince(start);
+  const live = useMemo(() => (running.poops?.length ? awards(running.poops, kind)[0] : undefined), [running.poops, kind]);
+  const leaders = useMemo(() => (running.poops ? periodWinners(running.poops) : null), [running.poops]);
 
-  const winCounts = new Map<string, number>();
-  for (const a of pastWeeks) winCounts.set(a.userId, (winCounts.get(a.userId) ?? 0) + 1);
-  const champions = [...winCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  // Finished periods: their reports, and for periods before reports existed, winners from the full history.
+  const { poops: history, error } = usePoops();
+  const mine = useMemo(() => reports?.filter((r) => r.kind === kind) ?? [], [reports, kind]);
+  const last = mine[0];
+  const hall = useMemo<HallRow[]>(() => {
+    const rows: HallRow[] = mine.flatMap((r) => {
+      const w = r.winners.points;
+      return w ? [{ start: r.start, userIds: w.userIds, points: w.value, categories: categoriesWon(r, w.userIds[0]) }] : [];
+    });
+    const older = history ? awards(history, kind).filter((a) => a.final && periodEnd(kind, a.start) <= REPORTS_FROM) : [];
+    return [...rows, ...older.map((a) => ({ start: a.start, userIds: [a.userId], points: a.points, count: a.count }))];
+  }, [mine, history, kind]);
 
+  // Most poop points from this tab's reports.
+  const champions = useMemo(() => {
+    const ids = new Set(mine.flatMap((r) => Object.values(r.winners).flatMap((w) => w.userIds)));
+    return [...ids]
+      .map((id) => [id, poopPoints(mine, id)] as const)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+  }, [mine]);
+
+  const err = running.error ?? error;
   return (
     <>
       <PageHead title={t('top.title')} />
-      {error && <p className="error">{error}</p>}
-      {!poops && !error && <PageSpinner label={t('common.loading')} />}
+      <Segmented options={tabs} value={kind} onChange={(v) => v && setKind(v)} variant="pills" />
+      {err && <p className="error mt">{err}</p>}
+      {!running.poops && !err && <PageSpinner label={t('common.loading')} />}
 
-      {poops && (
+      {running.poops && (
         <>
-          <div className="grid-2">
-            <HeroAward
-              award={thisWeek}
-              title={t('top.week')}
-              period={`${t('top.running')} · ${shortDate(weekStart(now))} – ${shortDate(weekEnd)}`}
-            />
-            <HeroAward award={thisMonth} title={t('top.month')} period={`${t('top.running')} · ${monthLabel(monthStart(now))}`} />
-          </div>
+          <HeroAward
+            award={live}
+            title={t(kind === 'week' ? 'top.week' : 'top.month')}
+            period={`${t('top.running')} · ${kind === 'week' ? `${shortDate(start)} – ${shortDate(lastDay)}` : monthLabel(start)}`}
+          />
 
-          {(pastWeeks[0] || pastMonths[0]) && (
-            <div className="tiles two awards-last">
-              {pastWeeks[0] && <SmallAward award={pastWeeks[0]} label={t('top.lastWeek')} />}
-              {pastMonths[0] && <SmallAward award={pastMonths[0]} label={t('top.lastMonth')} />}
-            </div>
+          {leaders && running.poops.length > 0 && (
+            <section className="card">
+              <h2>{t('top.leaders')}</h2>
+              <p className="hint card-sub">{t('top.leadersSub', { n: POOP_POINTS[kind] })}</p>
+              <Categories winners={leaders} />
+            </section>
           )}
 
-          {pastWeeks.length > 0 && (
+          <section className="card">
+            <h2>{t(kind === 'week' ? 'top.lastWeek' : 'top.lastMonth')}</h2>
+            {last ? (
+              <>
+                <p className="hint card-sub">{t('top.reportSub', { period: label(last.start), n: POOP_POINTS[kind] })}</p>
+                {last.count > 0 ? <Categories winners={last.winners} reward={POOP_POINTS[kind]} /> : <p className="muted">{t('stats.noEntries')}</p>}
+              </>
+            ) : (
+              <p className="muted">{t('top.noReport')}</p>
+            )}
+          </section>
+
+          {hall.length > 0 && (
             <section className="card">
               <h2>{t('top.hall')}</h2>
-              <p className="hint card-sub">{t('top.hallSub')}</p>
+              <p className="hint card-sub">{t(kind === 'week' ? 'top.hallSub' : 'top.hallSubMonth')}</p>
               {champions.length > 0 && (
                 <div className="champions">
                   {champions.map(([id, n], i) => (
@@ -133,22 +218,24 @@ export default function Top() {
                       <Avatar id={id} name={users.get(id)?.name} size={28} />
                       <span>
                         <strong>{users.get(id)?.name ?? t('common.unknown')}</strong>
-                        <small>{t('top.wins', { n })}</small>
+                        <small title={t('profile.poopPoints')}>💩 {n}</small>
                       </span>
                     </Link>
                   ))}
                 </div>
               )}
               <ol className="lb hall">
-                {pastWeeks.slice(0, 12).map((a) => {
-                  const name = users.get(a.userId)?.name ?? t('common.unknown');
+                {hall.slice(0, 12).map((a) => {
+                  const name = a.userIds.map((id) => users.get(id)?.name ?? t('common.unknown')).join(', ');
                   return (
                     <li key={a.start.getTime()}>
-                      <span className="hall-date">{t('top.weekOf', { date: shortDate(a.start) })}</span>
-                      <Avatar id={a.userId} name={name} size={30} />
-                      <Link to={profilePath(a.userId)} className="lb-main">
+                      <span className="hall-date">{label(a.start)}</span>
+                      <Avatar id={a.userIds[0]} name={users.get(a.userIds[0])?.name} size={30} />
+                      <Link to={profilePath(a.userIds[0])} className="lb-main">
                         <span className="lb-name">{name}</span>
-                        <span className="lb-sub">{t('admin.logged', { n: a.count })}</span>
+                        <span className="lb-sub">
+                          {a.categories !== undefined ? t('top.categories', { n: a.categories }) : t('admin.logged', { n: a.count ?? 0 })}
+                        </span>
                       </Link>
                       <span className="lb-count">
                         {fmtPts(a.points)}

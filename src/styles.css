@@ -596,6 +596,13 @@ button.link.danger {
   color: var(--muted);
   margin-top: 2px;
 }
+.tile-extra {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin-top: 2px;
+  color: var(--muted);
+}
 .tile-sub {
   display: block;
   font-size: 0.8rem;
@@ -894,6 +901,35 @@ button.link.danger {
   font-weight: 700;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 4px 2px;
+  min-height: 0;
+  cursor: pointer;
+}
+.app-version:hover {
+  color: var(--text);
+}
+.changelog-modal {
+  overflow-y: auto;
+}
+.changelog-modal h3 {
+  margin: 16px 0 4px;
+  font-size: 0.95rem;
+}
+.changelog-modal h4 {
+  margin: 10px 0 2px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.changelog {
+  margin: 0;
+  padding-left: 1.2em;
+  line-height: 1.45;
+}
+.changelog li + li {
+  margin-top: 4px;
 }
 .icon-switch,
 .install-btn {
@@ -1413,6 +1449,11 @@ img.avatar.blob,
   background: none;
   border-radius: 0;
   box-shadow: none;
+}
+.profile-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .profile-main {
   flex: 1;

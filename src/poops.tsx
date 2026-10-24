@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { subscribeAll } from './data';
+import { useFeed } from './feed';
 import { players, type Player } from './game';
 import { useSession } from './session';
 import type { Poop } from './types';
@@ -15,9 +16,8 @@ interface PoopsCtx {
 const Ctx = createContext<PoopsCtx | null>(null);
 
 /**
- * The full history, needed by Top, Stats and profiles. It is subscribed to once one of those pages
- * is opened, or in the background once the app is idle, so all of it is in the local cache for
- * offline use. Then kept live.
+ * The full history, needed by Stats (all time), profiles, Top's older winners and Admin. It is
+ * subscribed to once one of those pages is opened, then kept live.
  */
 export function PoopsProvider({ children }: { children: ReactNode }) {
   const { users } = useSession();
@@ -27,32 +27,30 @@ export function PoopsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => (active ? subscribeAll(setPoops, (e) => setError(e.message)) : undefined), [active]);
 
-  // Prefetch when the app has nothing else to do.
-  useEffect(() => {
-    if ('requestIdleCallback' in window) {
-      const id = requestIdleCallback(() => setActive(true), { timeout: 5_000 });
-      return () => cancelIdleCallback(id);
-    }
-    const id = setTimeout(() => setActive(true), 3_000);
-    return () => clearTimeout(id);
-  }, []);
-
   const all = useMemo(() => players(poops ?? [], users.keys()), [poops, users]);
   const activate = useMemo(() => () => setActive(true), []);
 
   return <Ctx.Provider value={{ poops, error, players: all, activate }}>{children}</Ctx.Provider>;
 }
 
-/** Entries changed on this device and not synced yet (0 until the history is loaded). */
+/** Entries changed on this device and not synced yet, among those loaded (the feed's, or the full history). */
 export function usePendingCount() {
   const c = useContext(Ctx);
-  return useMemo(() => c?.poops?.filter((p) => p.pending).length ?? 0, [c?.poops]);
+  const { poops: feed } = useFeed();
+  return useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of [...(c?.poops ?? []), ...(feed ?? [])]) if (p.pending) ids.add(p.id);
+    return ids.size;
+  }, [c?.poops, feed]);
 }
 
-export function usePoops() {
+/** The full history. It starts loading the first time a page needs it (`needed`, by default). */
+export function usePoops(needed = true) {
   const c = useContext(Ctx);
   if (!c) throw new Error('usePoops outside provider');
   const { activate } = c;
-  useEffect(activate, [activate]);
+  useEffect(() => {
+    if (needed) activate();
+  }, [needed, activate]);
   return c;
 }

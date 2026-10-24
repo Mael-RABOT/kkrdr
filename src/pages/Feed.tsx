@@ -22,7 +22,7 @@ export default function Feed() {
   const profilePath = useProfilePath();
   const dialogs = useDialogs();
   const { me, users } = useSession();
-  const { sort, setSort, poops, week, error, limit, more } = useFeed();
+  const { sort, setSort, poops, week, error, hasMore, checking, more } = useFeed();
   const [, tick] = useState(0);
   // The entry open in the popup; looked up in the live list so votes update in place.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -30,21 +30,19 @@ export default function Feed() {
   const navigate = useNavigate();
   const sentinel = useRef<HTMLDivElement>(null);
 
-  const hasMore = poops !== null && poops.length >= limit;
-
   // Load the next page when the bottom of the list comes into view.
   useEffect(() => {
     const el = sentinel.current;
     if (!el || !hasMore) return;
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting) && poops && poops.length >= limit) more();
+        if (entries.some((e) => e.isIntersecting)) more();
       },
       { rootMargin: '400px' },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [hasMore, poops, limit, more]);
+  }, [hasMore, more]);
 
   // Refresh relative times every minute.
   useEffect(() => {
@@ -88,7 +86,7 @@ export default function Feed() {
 
       <Segmented options={sortOptions} value={sort} onChange={(v) => v && setSort(v)} variant="pills" />
 
-      {poops?.length === 0 && (
+      {poops?.length === 0 && !hasMore && !checking && (
         <div className="card empty">
           <p className="muted">{t('feed.empty')}</p>
           <button className="primary" onClick={() => navigate('/new')}>

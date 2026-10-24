@@ -7,6 +7,7 @@ import {
   getDocFromCache,
   getDocFromServer,
   getDocs,
+  getDocsFromServer,
   limit,
   onSnapshot,
   orderBy,
@@ -21,8 +22,10 @@ import {
   deleteField,
   setDoc,
   Bytes,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import type { Report, ReportData } from './reports';
 import type { Poop, PoopDoc } from './types';
 
 const poops = collection(db, 'poops');
@@ -78,16 +81,6 @@ export function subscribeAll(cb: (p: Poop[]) => void, onError: (e: Error) => voi
   );
 }
 
-/** The newest n entries by the given field, live. */
-export function subscribeRecent(n: number, sort: FeedSort, cb: (p: Poop[], fromServer: boolean) => void, onError: (e: Error) => void) {
-  return onSnapshot(
-    query(poops, orderBy(sort, 'desc'), limit(n)),
-    { includeMetadataChanges: true },
-    (snap) => cb(snap.docs.map(toPoop), !snap.metadata.fromCache),
-    onError,
-  );
-}
-
 /** Entries since a date, live. */
 export function subscribeSince(since: Date, cb: (p: Poop[]) => void, onError: (e: Error) => void) {
   return onSnapshot(
@@ -98,9 +91,67 @@ export function subscribeSince(since: Date, cb: (p: Poop[]) => void, onError: (e
   );
 }
 
+/** Entries in [start, end), straight from the server (for a report, which must not miss any). */
+export async function fetchPeriod(start: Date, end: Date): Promise<Poop[]> {
+  const snap = await getDocsFromServer(
+    query(poops, where('at', '>=', Timestamp.fromDate(start)), where('at', '<', Timestamp.fromDate(end))),
+  );
+  return snap.docs.map(toPoop);
+}
+
+/** The newest entries by the given field from `from` on, live. */
+export function subscribeFrom(from: Date, sort: FeedSort, cb: (p: Poop[], fromServer: boolean) => void, onError: (e: Error) => void) {
+  return onSnapshot(
+    query(poops, where(sort, '>=', Timestamp.fromDate(from)), orderBy(sort, 'desc')),
+    { includeMetadataChanges: true },
+    (snap) => cb(snap.docs.map(toPoop), !snap.metadata.fromCache),
+    onError,
+  );
+}
+
+/** The newest entry before `before` by the given field, or null if there is none. */
+export async function newestBefore(before: Date, sort: FeedSort): Promise<Poop | null> {
+  const snap = await getDocs(query(poops, where(sort, '<', Timestamp.fromDate(before)), orderBy(sort, 'desc'), limit(1)));
+  return snap.docs[0] ? toPoop(snap.docs[0]) : null;
+}
+
 /** Set, change or (with null) remove your vote on someone else's entry. */
 export function vote(poopId: string, userId: string, value: 1 | -1 | null) {
   return updateDoc(doc(poops, poopId), { [`votes.${userId}`]: value ?? deleteField() });
+}
+
+// ---- reports ----
+
+const reports = collection(db, 'reports');
+
+/** Every week / month report, live. `fromServer` once the list is known to be complete. */
+export function subscribeReports(cb: (r: Report[], fromServer: boolean) => void, onError: (e: Error) => void) {
+  return onSnapshot(
+    reports,
+    // Metadata changes too: a server answer equal to the cache must still say the list is complete.
+    { includeMetadataChanges: true },
+    (snap) =>
+      cb(
+        snap.docs.map((d) => {
+          const r = d.data() as ReportData & { start: Timestamp; end: Timestamp };
+          return { ...r, id: d.id, start: r.start.toDate(), end: r.end.toDate() };
+        }),
+        !snap.metadata.fromCache,
+      ),
+    onError,
+  );
+}
+
+/**
+ * Writes a report unless someone already did. A transaction needs the server, so nothing is
+ * queued offline; the rules refuse a second write, the first client wins.
+ */
+export function createReport(id: string, r: Omit<ReportData, 'createdAt'> & { start: Date; end: Date }) {
+  const ref = doc(reports, id);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) return;
+    tx.set(ref, { ...r, start: Timestamp.fromDate(r.start), end: Timestamp.fromDate(r.end), createdAt: serverTimestamp() });
+  });
 }
 
 // ---- avatars ----

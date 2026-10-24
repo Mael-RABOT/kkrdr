@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { compactDay, timeOfDay } from '../format';
 import { score, scoreTier } from '../game';
@@ -9,6 +9,7 @@ import type { Poop } from '../types';
 import { useProfilePath } from '../users';
 import Avatar from './Avatar';
 import ScorePill from './ScorePill';
+import Spinner from './Spinner';
 
 const PAGE = 14;
 /** Lane colours, readable on both themes. */
@@ -21,16 +22,32 @@ interface Props {
    * Without it, a single rail for one person.
    */
   lanes?: string[];
+  /**
+   * The caller loads entries in windows: `poops` is all of what is loaded so far, `onMore` fetches
+   * older ones when the bottom comes into view. Without it, the days are paged here.
+   */
+  hasMore?: boolean;
+  onMore?: () => void;
 }
 
 /** git-log style history: one node per poop, newest first, gaps marked. */
-export default function Timeline({ poops, lanes }: Props) {
+export default function Timeline({ poops, lanes, hasMore: moreToLoad, onMore }: Props) {
   const t = useT();
   const { users } = useSession();
   const [days, setDays] = useState(PAGE);
-  const { items, hasMore } = timeline(poops, days);
+  const { items, hasMore } = timeline(poops, onMore ? Infinity : days);
+  const sentinel = useRef<HTMLDivElement>(null);
 
-  if (items.length === 0) return <p className="muted">{t('profile.noneYet')}</p>;
+  // Load older entries when the bottom of the list comes into view.
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !onMore || !moreToLoad) return;
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && onMore(), { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [moreToLoad, onMore]);
+
+  if (items.length === 0 && !moreToLoad) return <p className="muted">{t('profile.noneYet')}</p>;
 
   const laneOf = new Map(lanes?.map((id, i) => [id, i]));
   // Lane geometry lives in CSS (lanes are narrower on phones): pass the lane count.
@@ -94,7 +111,12 @@ export default function Timeline({ poops, lanes }: Props) {
           ),
         )}
       </ol>
-      {hasMore && (
+      {onMore && moreToLoad && (
+        <div ref={sentinel} className="feed-more muted">
+          <Spinner label={t('common.loading')} size="sm" />
+        </div>
+      )}
+      {!onMore && hasMore && (
         <button type="button" className="sm more" onClick={() => setDays((n) => n + PAGE)}>
           {t('common.showMore')}
         </button>

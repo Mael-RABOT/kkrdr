@@ -15,6 +15,8 @@ import { fmtMinutes, fmtNum, fmtPts, shortDate } from '../format';
 import { BADGES, score } from '../game';
 import { useT, type Key } from '../i18n';
 import { usePoops } from '../poops';
+import { poopPoints } from '../reports';
+import { useReports } from '../reportsProvider';
 import { useSession } from '../session';
 import { sitTime } from '../stats';
 import { useOnline } from '../useOnline';
@@ -25,6 +27,7 @@ export default function Profile() {
   const { name = '' } = useParams();
   const { me, users } = useSession();
   const { poops, players } = usePoops();
+  const reports = useReports();
   const user = findUser(users, name);
   const id = user?.id ?? '';
   const profilePath = useProfilePath();
@@ -48,7 +51,14 @@ export default function Profile() {
           {id === me?.id && <PictureControls userId={id} />}
         </div>
         <div className="profile-main">
-          {id === me?.id && <span className="pill amber">{t('common.you')}</span>}
+          <span className="profile-pills">
+            {id === me?.id && <span className="pill amber">{t('common.you')}</span>}
+            {reports && (
+              <span className="pill poop-points" title={t('profile.poopPoints')}>
+                💩 {poopPoints(reports, id)}
+              </span>
+            )}
+          </span>
           {p && <LevelBar level={p.level} xp={p.xp} />}
         </div>
       </section>

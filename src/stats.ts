@@ -152,3 +152,62 @@ export function computeStats(poops: Poop[], start: Date | null, now = new Date()
     avgDuration: avg(poops.flatMap((p) => (p.duration != null ? [p.duration] : []))),
   };
 }
+
+// ---- period winners ----
+
+/** The categories won in a week / month report: most points, then the Stats records. */
+export const CATEGORIES = ['points', 'best', 'streak', 'busiestDay', 'earliest', 'latest', 'sitter'] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+export interface CategoryWin {
+  /** Everyone tied for the top value wins. */
+  userIds: string[];
+  /** Points, best score, streak days, entries in a day, minutes after midnight (earliest / latest) or minutes sat. */
+  value: number;
+  /** best only: the winning entry (the first one on a tie). */
+  poopId?: string;
+}
+
+export type Winners = Partial<Record<Category, CategoryWin>>;
+
+/** Top value of a list of (user, value) pairs and every user reaching it. Lower wins with `lowest`. */
+function leaders(rows: [string, number, string?][], lowest = false): CategoryWin | undefined {
+  let win: CategoryWin | undefined;
+  for (const [userId, value, poopId] of rows) {
+    // Scores are fractions: compare them with a little slack.
+    const d = win ? (lowest ? win.value - value : value - win.value) : 1;
+    if (d > 1e-9) win = { userIds: [userId], value, ...(poopId ? { poopId } : {}) };
+    else if (Math.abs(d) <= 1e-9 && !win!.userIds.includes(userId)) win!.userIds.push(userId);
+  }
+  return win;
+}
+
+/** Winners of each category over a period's entries; ties are shared. Categories nobody qualifies for are left out. */
+export function periodWinners(poops: Poop[]): Winners {
+  const byUser = new Map<string, Poop[]>();
+  for (const p of poops) {
+    if (!byUser.has(p.userId)) byUser.set(p.userId, []);
+    byUser.get(p.userId)!.push(p);
+  }
+  const users = [...byUser.entries()];
+  const maxInDay = (list: Poop[]) => {
+    const c = new Map<string, number>();
+    for (const p of list) c.set(dayKey(p.at), (c.get(dayKey(p.at)) ?? 0) + 1);
+    return Math.max(...c.values());
+  };
+  const bestRows = [...poops]
+    .sort((a, b) => a.at.getTime() - b.at.getTime())
+    .map((p): [string, number, string] => [p.userId, score(p), p.id]);
+
+  const w: Winners = {
+    points: leaders(users.map(([u, list]) => [u, list.reduce((a, p) => a + score(p), 0)])),
+    best: leaders(bestRows),
+    streak: leaders(users.map(([u, list]) => [u, longestStreak(list.map((p) => p.at))])),
+    busiestDay: leaders(users.map(([u, list]) => [u, maxInDay(list)])),
+    earliest: leaders(poops.map((p) => [p.userId, minutesOfDay(p.at)]), true),
+    latest: leaders(poops.map((p) => [p.userId, minutesOfDay(p.at)])),
+    sitter: leaders(users.map(([u, list]): [string, number] => [u, sitTime(list)]).filter(([, m]) => m > 0)),
+  };
+  for (const k of CATEGORIES) if (!w[k]) delete w[k];
+  return w;
+}

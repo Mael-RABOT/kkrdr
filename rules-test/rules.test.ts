@@ -221,3 +221,41 @@ describe('voting', () => {
     await assertFails(setDoc(doc(db('dev1'), 'poops/bx'), poop('bob', { votes: { alice: 1 } })));
   });
 });
+
+describe('reports', () => {
+  beforeEach(async () => {
+    await link('dev1', 'bobkey', 'bob');
+    await link('dev2', 'alicekey', 'alice');
+  });
+  const day = 86_400_000;
+  const report = (createdBy: string, extra: object = {}) => ({
+    kind: 'week',
+    start: Timestamp.fromMillis(Date.now() - 9 * day),
+    end: Timestamp.fromMillis(Date.now() - 2 * day),
+    count: 3,
+    winners: { points: { userIds: ['bob'], value: 12 } },
+    createdBy,
+    createdAt: serverTimestamp(),
+    ...extra,
+  });
+
+  it('can be written once by anyone, then never changed', async () => {
+    await assertSucceeds(setDoc(doc(db('dev1'), 'reports/week-2026-10-12'), report('bob')));
+    await assertSucceeds(getDoc(doc(db('dev2'), 'reports/week-2026-10-12')));
+    await assertFails(setDoc(doc(db('dev2'), 'reports/week-2026-10-12'), report('alice')));
+    await assertFails(updateDoc(doc(db('dev1'), 'reports/week-2026-10-12'), { count: 9 }));
+    await assertFails(deleteDoc(doc(db('dev1'), 'reports/week-2026-10-12')));
+  });
+  it('rejects a period not over, a bad id, someone else as author or extra fields', async () => {
+    await assertFails(setDoc(doc(db('dev1'), 'reports/week-2026-10-12'), report('bob', { end: Timestamp.fromMillis(Date.now() + day) })));
+    await assertFails(setDoc(doc(db('dev1'), 'reports/month-2026-10'), report('bob')));
+    await assertFails(setDoc(doc(db('dev1'), 'reports/whatever'), report('bob')));
+    await assertFails(setDoc(doc(db('dev1'), 'reports/week-2026-10-12'), report('alice')));
+    await assertFails(setDoc(doc(db('dev1'), 'reports/week-2026-10-12'), report('bob', { extra: 1 })));
+  });
+  it('needs a valid session, and an admin can delete one', async () => {
+    await assertFails(setDoc(doc(env.authenticatedContext('nobody').firestore(), 'reports/week-2026-10-12'), report('bob')));
+    await assertSucceeds(setDoc(doc(db('dev1'), 'reports/week-2026-10-12'), report('bob')));
+    await assertSucceeds(deleteDoc(doc(db('dev2'), 'reports/week-2026-10-12')));
+  });
+});

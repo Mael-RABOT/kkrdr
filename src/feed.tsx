@@ -1,22 +1,26 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { subscribeRecent, subscribeSince, type FeedSort } from './data';
+import { subscribeSince, type FeedSort } from './data';
 import { weekStart } from './game';
 import { readLocal, writeLocal } from './localCache';
 import { readPref, writePref } from './prefs';
 import type { Poop } from './types';
+import { useWindowed } from './windowed';
 
-export const PAGE = 20;
+/** Entries saved for a quick start. */
+const CACHED = 20;
 const CACHE = 'feed-cache';
 
 interface FeedCtx {
   sort: FeedSort;
   setSort: (s: FeedSort) => void;
-  /** Newest `limit` entries, newest first. null while loading. */
+  /** The newest days loaded so far, newest first. null while loading. */
   poops: Poop[] | null;
   /** This week's entries, for the leader banner. */
   week: Poop[] | null;
   error: string | null;
-  limit: number;
+  hasMore: boolean;
+  /** Whether there is anything older is not known yet. */
+  checking: boolean;
   more: () => void;
 }
 
@@ -37,26 +41,13 @@ function readCache(sort: FeedSort): Poop[] | null {
  */
 export function FeedProvider({ children }: { children: ReactNode }) {
   const [sort, setSortState] = useState<FeedSort>(() => (readPref('feedSort') === 'createdAt' ? 'createdAt' : 'at'));
-  const [limit, setLimit] = useState(PAGE);
-  const [poops, setPoops] = useState<Poop[] | null>(() => readCache(sort));
   const [week, setWeek] = useState<Poop[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  // Newest `limit` entries; the limit grows as you scroll (already loaded ones come from the local cache).
-  useEffect(
-    () =>
-      subscribeRecent(
-        limit,
-        sort,
-        (list, fromServer) => {
-          setPoops(list);
-          setError(null);
-          if (fromServer) writeLocal(CACHE, { sort, poops: list.slice(0, PAGE) });
-        },
-        (e) => setError(e.message),
-      ),
-    [limit, sort],
-  );
+  // Two days at a time; older ones are added as you scroll.
+  const { poops, error, hasMore, checking, more } = useWindowed(sort, {
+    initial: () => readCache(sort),
+    onServer: (list) => writeLocal(CACHE, { sort, poops: list.slice(0, CACHED) }),
+  });
   // The provider outlives a page visit, so move to the new week when the app comes back on a Monday.
   const [weekFrom, setWeekFrom] = useState(() => weekStart(new Date()).getTime());
   useEffect(() => {
@@ -71,15 +62,11 @@ export function FeedProvider({ children }: { children: ReactNode }) {
       if (v === sort) return;
       writePref('feedSort', v);
       setSortState(v);
-      setLimit(PAGE);
-      setPoops(readCache(v));
     },
     [sort],
   );
 
-  const more = useCallback(() => setLimit((n) => n + PAGE), []);
-
-  return <Ctx.Provider value={{ sort, setSort, poops, week, error, limit, more }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ sort, setSort, poops, week, error, hasMore, checking, more }}>{children}</Ctx.Provider>;
 }
 
 export function useFeed() {

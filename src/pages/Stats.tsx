@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import BarChart from '../components/BarChart';
 import PageHead from '../components/PageHead';
+import RecordTile from '../components/RecordTile';
 import { PageSpinner } from '../components/Spinner';
 import Segmented from '../components/Segmented';
 import Timeline from '../components/Timeline';
@@ -14,6 +15,8 @@ import { useSession } from '../session';
 import { useProfilePath } from '../users';
 import { computeStats, periodStart, type Period } from '../stats';
 import { PLACE_IDS, SIZE_IDS, TYPE_IDS } from '../types';
+import { useSince } from '../useSince';
+import { useWindowed } from '../windowed';
 
 const fmt = (n: number | null, digits = 1) => fmtNum(n, digits);
 
@@ -21,7 +24,6 @@ export default function Stats() {
   const t = useT();
   const profilePath = useProfilePath();
   const { me, users } = useSession();
-  const { poops: all, error } = usePoops();
   const [period, setPeriod] = useState<Period>('week');
   const periods = [
     { value: 'week' as const, label: t('stats.week') },
@@ -30,7 +32,12 @@ export default function Stats() {
   ];
 
   const start = useMemo(() => periodStart(period), [period]);
-  const poops = useMemo(() => (all && start ? all.filter((p) => p.at >= start) : all), [all, start]);
+  // Week and month need only their own entries; all time needs the full history.
+  const history = usePoops(period === 'all');
+  const since = useSince(start);
+  const { poops, error } = start ? since : history;
+  // The timeline loads two days at a time as you scroll, back to the period start.
+  const tl = useWindowed('at', { bound: start });
   const s = useMemo(() => (poops ? computeStats(poops, start) : null), [poops, start]);
   const name = (id: string) => users.get(id)?.name ?? t('common.unknown');
   const myIndex = s?.ranking.findIndex((r) => r.userId === me?.id) ?? -1;
@@ -113,12 +120,12 @@ export default function Stats() {
                 <section className="card">
                   <h2>{t('stats.records')}</h2>
                   <div className="tiles two">
-                    <Record wide label={t('stats.bestPoop')} value={s.best && fmtNum(score(s.best))} who={s.best && name(s.best.userId)} />
-                    <Record label={t('stats.longestStreak')} value={s.streak && t('common.days', { n: s.streak.days })} who={s.streak && name(s.streak.userId)} />
-                    <Record label={t('stats.mostInDay')} value={s.busiestDay && String(s.busiestDay.count)} who={s.busiestDay && name(s.busiestDay.userId)} />
-                    <Record label={t('stats.earliest')} value={s.earliest && timeOfDay(s.earliest.at)} who={s.earliest && name(s.earliest.userId)} />
-                    <Record label={t('stats.latest')} value={s.latest && timeOfDay(s.latest.at)} who={s.latest && name(s.latest.userId)} />
-                    <Record wide label={t('stats.sitter')} value={s.sitter && fmtMinutes(s.sitter.minutes)} who={s.sitter && name(s.sitter.userId)} />
+                    <RecordTile wide label={t('stats.bestPoop')} value={s.best && fmtNum(score(s.best))} who={s.best && name(s.best.userId)} />
+                    <RecordTile label={t('stats.longestStreak')} value={s.streak && t('common.days', { n: s.streak.days })} who={s.streak && name(s.streak.userId)} />
+                    <RecordTile label={t('stats.mostInDay')} value={s.busiestDay && String(s.busiestDay.count)} who={s.busiestDay && name(s.busiestDay.userId)} />
+                    <RecordTile label={t('stats.earliest')} value={s.earliest && timeOfDay(s.earliest.at)} who={s.earliest && name(s.earliest.userId)} />
+                    <RecordTile label={t('stats.latest')} value={s.latest && timeOfDay(s.latest.at)} who={s.latest && name(s.latest.userId)} />
+                    <RecordTile wide label={t('stats.sitter')} value={s.sitter && fmtMinutes(s.sitter.minutes)} who={s.sitter && name(s.sitter.userId)} />
                   </div>
                 </section>
 
@@ -158,22 +165,12 @@ export default function Stats() {
           {s.total > 0 && (
             <section className="card">
               <h2>{t('stats.timeline')}</h2>
-              <Timeline poops={poops!} lanes={s.ranking.map((r) => r.userId)} />
+              <Timeline poops={tl.poops ?? []} lanes={s.ranking.map((r) => r.userId)} hasMore={tl.hasMore || tl.checking} onMore={tl.more} />
             </section>
           )}
         </>
       )}
     </>
-  );
-}
-
-function Record({ label, value, who, wide }: { label: string; value: string | null; who: string | null; wide?: boolean }) {
-  return (
-    <div className={`tile${wide ? ' wide' : ''}`}>
-      <span className="tile-value">{value ?? '–'}</span>
-      <span className="tile-label">{label}</span>
-      {who && <span className="tile-sub">{who}</span>}
-    </div>
   );
 }
 
