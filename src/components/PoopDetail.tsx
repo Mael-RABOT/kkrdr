@@ -6,6 +6,7 @@ import { useProfilePath } from '../users';
 import type { Poop } from '../types';
 import Avatar from './Avatar';
 import { ColorDot } from './ColorPicker';
+import Comments from './Comments';
 import Modal from './Modal';
 import ScorePill from './ScorePill';
 import TypeIcon from './TypeIcon';
@@ -18,8 +19,8 @@ export function placeText(p: Poop, t: T): string {
   return label + (p.placeNote ? ` · ${p.placeNote}` : '');
 }
 
-/** One entry in a popup: every field, and who voted which way. */
-export default function PoopDetail({ poop: p, onClose }: { poop: Poop; onClose: () => void }) {
+/** One entry in a popup: every field, who voted which way, and the comments. */
+export default function PoopDetail({ poop: p, onClose, focusComments }: { poop: Poop; onClose: () => void; focusComments?: boolean }) {
   const t = useT();
   const { me, users } = useSession();
   const profilePath = useProfilePath();
@@ -135,13 +136,15 @@ export default function PoopDetail({ poop: p, onClose }: { poop: Poop; onClose: 
         )}
       </div>
 
+      <Comments poop={p} autoFocus={focusComments} onNavigate={onClose} />
+
       <div className="modal-actions">
         {p.userId === me?.id && (
           <Link to={`/edit/${p.id}`} className="link-btn detail-edit" onClick={onClose}>
             {t('common.edit')}
           </Link>
         )}
-        <button type="button" onClick={onClose} autoFocus>
+        <button type="button" onClick={onClose} autoFocus={!focusComments}>
           {t('common.close')}
         </button>
       </div>

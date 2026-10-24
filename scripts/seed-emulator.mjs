@@ -34,25 +34,33 @@ for (const [id, name, admin, key] of people) {
 
 const sizes = ['S', 'M', 'L', 'XL'];
 const places = ['home', 'work', 'friends', 'public', 'other'];
+const lines = ['Impressive.', 'Again?!', 'Respect 💩', 'That one was rough.', 'Legendary.'];
 let n = 0;
 for (let day = 0; day < 45; day++) {
-  for (const [id] of people) {
+  for (const [uid] of people) {
     const count = Math.floor(Math.random() * 3);
     for (let i = 0; i < count; i++) {
       const at = new Date(now);
       at.setDate(at.getDate() - day);
       at.setHours(6 + Math.floor(Math.random() * 16), Math.floor(Math.random() * 60), 0, 0);
       if (at > now) continue;
-      await put(`poops/seed${n++}`, {
-        userId: id,
+      const id = `seed${n++}`;
+      const comments = people.filter(([other]) => other !== uid && Math.random() < 0.2);
+      for (const [other] of comments) {
+        const createdAt = new Date(Math.min(now.getTime(), at.getTime() + Math.random() * 3 * 3600_000));
+        await put(`poops/${id}/comments/${other}`, { userId: other, text: lines[Math.floor(Math.random() * lines.length)], createdAt });
+      }
+      await put(`poops/${id}`, {
+        userId: uid,
         at,
         type: 1 + Math.floor(Math.random() * 7),
         size: sizes[Math.floor(Math.random() * 4)],
         place: places[Math.floor(Math.random() * 5)],
         rating: 1 + Math.floor(Math.random() * 5),
         votes: Object.fromEntries(
-          people.filter(([other]) => other !== id && Math.random() < 0.4).map(([other]) => [other, Math.random() < 0.8 ? 1 : -1]),
+          people.filter(([other]) => other !== uid && Math.random() < 0.4).map(([other]) => [other, Math.random() < 0.8 ? 1 : -1]),
         ),
+        ...(comments.length && { commentCount: comments.length }),
         createdAt: at,
       });
     }

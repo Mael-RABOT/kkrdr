@@ -1,6 +1,13 @@
 /** What changed in each version, newest first. Written by hand at each release. */
 export const CHANGELOG: { version: string; items: { en: string; fr: string }[] }[] = [
   {
+    version: '1.8.0',
+    items: [
+      { en: 'Comments on each entry: tap 💬 in the feed. Edit or delete your own.', fr: 'Ajout des commentaires sous chaque poop.' },
+      { en: 'Reply to a comment, or tag someone by typing @.', fr: 'Mentions dans les commentaires avec "@".' },
+    ],
+  },
+  {
     version: '1.7.0',
     items: [
       { en: 'Weekly and monthly reports: a winner for most points and for each record.', fr: 'Bilans de la semaine et du mois : un gagnant pour le plus de points et pour chaque record.' },

@@ -26,6 +26,8 @@ export default function Feed() {
   const [, tick] = useState(0);
   // The entry open in the popup; looked up in the live list so votes update in place.
   const [openId, setOpenId] = useState<string | null>(null);
+  // Opened from the comment button: the popup starts on the comment box.
+  const [focusComments, setFocusComments] = useState(false);
   const open = openId ? poops?.find((p) => p.id === openId) : undefined;
   const navigate = useNavigate();
   const sentinel = useRef<HTMLDivElement>(null);
@@ -115,7 +117,11 @@ export default function Feed() {
               key={p.id}
               className={`entry clickable${p.perfect ? ' perfect' : ''}`}
               // Links and buttons inside keep their own action.
-              onClick={(e) => !(e.target as HTMLElement).closest('a, button') && setOpenId(p.id)}
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('a, button')) return;
+                setFocusComments(false);
+                setOpenId(p.id);
+              }}
             >
               <Link to={profilePath(p.userId)} className="entry-avatar">
                 <Avatar id={p.userId} name={name} />
@@ -148,6 +154,18 @@ export default function Feed() {
                 <div className="entry-foot">
                   <ScorePill poop={p} />
                   <VoteButtons poop={p} />
+                  <button
+                    type="button"
+                    className="comment-btn"
+                    aria-label={t('comments.open')}
+                    onClick={() => {
+                      setFocusComments(true);
+                      setOpenId(p.id);
+                    }}
+                  >
+                    <CommentIcon />
+                    {!!p.commentCount && <span>{p.commentCount}</span>}
+                  </button>
                   {p.userId === me?.id && (
                     <span className="entry-actions">
                       <Link to={`/edit/${p.id}`} className="link-btn">
@@ -164,12 +182,20 @@ export default function Feed() {
           ];
         })}
       </ul>
-      {open && <PoopDetail poop={open} onClose={() => setOpenId(null)} />}
+      {open && <PoopDetail poop={open} onClose={() => setOpenId(null)} focusComments={focusComments} />}
       {hasMore && (
         <div ref={sentinel} className="feed-more muted">
           <Spinner label={t('common.loading')} size="sm" />
         </div>
       )}
     </>
+  );
+}
+
+function CommentIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      <path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
   );
 }

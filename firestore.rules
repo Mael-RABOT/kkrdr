@@ -79,7 +79,7 @@ service cloud.firestore {
     function validPoop(d) {
       return d.keys().hasAll(['userId', 'at', 'type', 'size', 'place', 'createdAt'])
         && d.keys().hasOnly(['userId', 'at', 'type', 'size', 'place', 'placeNote',
-                             'duration', 'rating', 'color', 'note', 'createdAt', 'votes', 'perfect'])
+                             'duration', 'rating', 'color', 'note', 'createdAt', 'votes', 'perfect', 'commentCount'])
         && d.at is timestamp
         // Generous margin: a phone clock or time zone set wrong must not block logging (the app checks too).
         && d.at <= request.time + duration.value(1, 'd')
@@ -140,13 +140,15 @@ service cloud.firestore {
         && request.resource.data.userId == sess().userId
         && request.resource.data.createdAt == request.time
         && !('votes' in request.resource.data)
+        && !('commentCount' in request.resource.data)
         && validPoop(request.resource.data);
-      // Owner edits: anything but the votes.
+      // Owner edits: anything but the votes and the comment count.
       allow update: if valid()
         && resource.data.userId == sess().userId
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.get('votes', {}) == resource.data.get('votes', {})
+        && request.resource.data.get('commentCount', 0) == resource.data.get('commentCount', 0)
         && validPoop(request.resource.data);
       // Voting on someone else's poop.
       allow update: if valid()
@@ -155,6 +157,60 @@ service cloud.firestore {
         && request.resource.data.votes is map
         && validVote(resource.data.get('votes', {}), request.resource.data.votes, sess().userId);
       allow delete: if (valid() && resource.data.userId == sess().userId) || isAdmin();
+      // The comment count, by anyone: up by one, or down (several at once when an admin removes a user).
+      // Rules can't tie it to a given comment; the comment rules below require the matching change.
+      allow update: if valid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
+        && request.resource.data.commentCount is int
+        && request.resource.data.commentCount >= 0
+        && (request.resource.data.commentCount == resource.data.get('commentCount', 0) + 1
+            || request.resource.data.commentCount < resource.data.get('commentCount', 0));
+
+      function poopPath() {
+        return /databases/$(database)/documents/poops/$(poopId);
+      }
+
+      function countBefore() {
+        return get(poopPath()).data.get('commentCount', 0);
+      }
+
+      function countAfter() {
+        return getAfter(poopPath()).data.get('commentCount', 0);
+      }
+
+      function validText(d) {
+        return d.text is string && d.text.size() > 0 && d.text.size() <= 280;
+      }
+
+      // Comments, written in the same batch as the entry's commentCount.
+      match /comments/{commentId} {
+        allow read: if valid();
+        allow create: if valid()
+          && request.resource.data.keys().hasOnly(['userId', 'text', 'createdAt'])
+          && request.resource.data.userId == sess().userId
+          && validText(request.resource.data)
+          && request.resource.data.createdAt == request.time
+          && countAfter() == countBefore() + 1;
+        // The author may change the text.
+        allow update: if valid()
+          && resource.data.userId == sess().userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+          && validText(request.resource.data)
+          && request.resource.data.editedAt == request.time;
+        // An admin may always delete (removing a user clears threads in chunks); the app still
+        // lowers the count when a single comment goes.
+        allow delete: if isAdmin() || (valid() && (
+          // With the entry, in the same batch: by the author or the entry's owner.
+          (!existsAfter(poopPath())
+            && (resource.data.userId == sess().userId || get(poopPath()).data.userId == sess().userId))
+          // On its own: by the author, the count going down.
+          || (resource.data.userId == sess().userId && countAfter() < countBefore())));
+      }
+    }
+
+    // Removing a user finds their comments on every entry.
+    match /{path=**}/comments/{commentId} {
+      allow read: if isAdmin();
     }
   }
 }

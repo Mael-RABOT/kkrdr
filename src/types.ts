@@ -29,6 +29,8 @@ export interface Poop {
   perfect?: boolean;
   /** When it was posted (server time). */
   createdAt?: Date;
+  /** How many comments, kept in step with the comments subcollection. */
+  commentCount?: number;
   /** Local changes not synced yet (client only, never stored). */
   pending?: boolean;
 }
@@ -36,6 +38,17 @@ export interface Poop {
 export interface PoopDoc extends Omit<Poop, 'id' | 'at' | 'createdAt' | 'pending'> {
   at: Timestamp;
   createdAt?: Timestamp | null;
+}
+
+/** A comment on an entry, in poops/{poopId}/comments. */
+export interface Comment {
+  id: string;
+  userId: string;
+  text: string;
+  createdAt: Date;
+  editedAt?: Date;
+  /** Local changes not synced yet (client only, never stored). */
+  pending?: boolean;
 }
 
 export const TYPE_IDS = [1, 2, 3, 4, 5, 6, 7] as const;

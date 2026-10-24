@@ -1131,6 +1131,20 @@ button.gold {
 .votes.own button {
   opacity: 0.3;
 }
+.comment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
 .vote-count {
   min-width: 24px;
   text-align: center;
@@ -2333,6 +2347,116 @@ html:has(.poop-detail[open]) body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.detail-comments {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.detail-comments h3 {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.detail-comments > p {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+.comments {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.comment {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+.comment-body {
+  flex: 1;
+  min-width: 0;
+}
+.comment-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 0.8rem;
+}
+.comment-head a {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+.comment-text {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.comment-actions {
+  display: flex;
+  gap: 14px;
+}
+.comment-form {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.comment-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.comment-form-actions button.primary {
+  color: var(--accent-text);
+}
+.comment-send {
+  width: 100%;
+}
+/* Between the comment box and the popup's Edit / Close. */
+.detail-comments + .modal-actions {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.mention {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.mention.me {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+}
+.mention-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.mention-list button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+}
+.mention-list button.on {
+  background: var(--accent-soft);
 }
 .detail-edit {
   margin-right: auto;

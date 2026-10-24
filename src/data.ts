@@ -23,10 +23,13 @@ import {
   setDoc,
   Bytes,
   runTransaction,
+  increment,
+  collectionGroup,
+  type DocumentReference,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Report, ReportData } from './reports';
-import type { Poop, PoopDoc } from './types';
+import type { Comment, Poop, PoopDoc } from './types';
 
 const poops = collection(db, 'poops');
 
@@ -67,8 +70,13 @@ export async function getPoop(id: string): Promise<Poop | null> {
   return snap.exists() ? toPoop(snap) : null;
 }
 
-export function deletePoop(id: string) {
-  return deleteDoc(doc(poops, id));
+/** Deletes an entry and its comments. Comments not in the local cache are missed when offline. */
+export async function deletePoop(id: string) {
+  const thread = await getDocs(commentsOf(id));
+  const batch = writeBatch(db);
+  thread.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(doc(poops, id));
+  return batch.commit();
 }
 
 export function subscribeAll(cb: (p: Poop[]) => void, onError: (e: Error) => void) {
@@ -118,6 +126,46 @@ export async function newestBefore(before: Date, sort: FeedSort): Promise<Poop |
 /** Set, change or (with null) remove your vote on someone else's entry. */
 export function vote(poopId: string, userId: string, value: 1 | -1 | null) {
   return updateDoc(doc(poops, poopId), { [`votes.${userId}`]: value ?? deleteField() });
+}
+
+// ---- comments ----
+
+/** An entry's comments: poops/{id}/comments. The entry's commentCount changes in the same batch. */
+const commentsOf = (poopId: string) => collection(poops, poopId, 'comments');
+
+function toComment(snap: DocumentSnapshot): Comment {
+  const d = snap.data({ serverTimestamps: 'estimate' }) as { userId: string; text: string; createdAt: Timestamp; editedAt?: Timestamp };
+  const c: Comment = { id: snap.id, userId: d.userId, text: d.text, createdAt: d.createdAt.toDate(), editedAt: d.editedAt?.toDate() };
+  if (snap.metadata.hasPendingWrites) c.pending = true;
+  return c;
+}
+
+/** An entry's comments, oldest first, live. */
+export function subscribeComments(poopId: string, cb: (c: Comment[]) => void, onError: (e: Error) => void) {
+  return onSnapshot(
+    query(commentsOf(poopId), orderBy('createdAt')),
+    { includeMetadataChanges: true },
+    (snap) => cb(snap.docs.map(toComment)),
+    onError,
+  );
+}
+
+export function addComment(poopId: string, userId: string, text: string) {
+  const batch = writeBatch(db);
+  batch.set(doc(commentsOf(poopId)), { userId, text, createdAt: serverTimestamp() });
+  batch.update(doc(poops, poopId), { commentCount: increment(1) });
+  return batch.commit();
+}
+
+export function editComment(poopId: string, id: string, text: string) {
+  return updateDoc(doc(commentsOf(poopId), id), { text, editedAt: serverTimestamp() });
+}
+
+export function deleteComment(poopId: string, id: string) {
+  const batch = writeBatch(db);
+  batch.delete(doc(commentsOf(poopId), id));
+  batch.update(doc(poops, poopId), { commentCount: increment(-1) });
+  return batch.commit();
 }
 
 // ---- reports ----
@@ -253,14 +301,54 @@ export async function countPoops(userId: string): Promise<number> {
   return snap.data().count;
 }
 
-/** Deletes a user, their keys and all their entries. The user doc goes last so a failure can be retried. */
+/**
+ * Every comment a user wrote. The collection group query needs its single-field index
+ * (firestore.indexes.json); until that is deployed and built, it falls back to querying each thread.
+ */
+async function commentsBy(userId: string): Promise<DocumentReference[]> {
+  try {
+    const snap = await getDocs(query(collectionGroup(db, 'comments'), where('userId', '==', userId)));
+    return snap.docs.map((c) => c.ref);
+  } catch (e) {
+    if ((e as { code?: string }).code !== 'failed-precondition') throw e;
+    const all = await getDocs(poops);
+    const threads = await Promise.all(
+      all.docs.map((d) => getDocs(query(commentsOf(d.id), where('userId', '==', userId)))),
+    );
+    return threads.flatMap((t) => t.docs.map((c) => c.ref));
+  }
+}
+
+/**
+ * Deletes a user, their keys, all their entries (with their comments) and their comments on other
+ * entries. The user doc goes last so a failure can be retried.
+ */
 export async function removeUser(userId: string) {
-  const [entries, userKeys] = await Promise.all([
+  const [entries, userKeys, written] = await Promise.all([
     getDocs(query(poops, where('userId', '==', userId))),
     keysFor(userId),
+    commentsBy(userId),
   ]);
+  const own = new Set(entries.docs.map((d) => d.id));
+
+  // Comments on other people's entries: one batch per entry, so its count goes down with them.
+  const byPoop = new Map<string, DocumentReference[]>();
+  for (const ref of written) {
+    const poopId = ref.parent.parent!.id;
+    if (own.has(poopId)) continue;
+    byPoop.set(poopId, [...(byPoop.get(poopId) ?? []), ref]);
+  }
+  for (const [poopId, refs] of byPoop) {
+    const batch = writeBatch(db);
+    refs.forEach((r) => batch.delete(r));
+    batch.update(doc(poops, poopId), { commentCount: increment(-refs.length) });
+    await batch.commit();
+  }
+
+  const threads = await Promise.all(entries.docs.map((d) => getDocs(commentsOf(d.id))));
   const refs = [
-    ...entries.docs.map((d) => d.ref),
+    // Each thread goes before its entry, in the same batch or an earlier one.
+    ...entries.docs.flatMap((d, i) => [...threads[i].docs.map((c) => c.ref), d.ref]),
     ...userKeys.map((k) => doc(keys, k)),
     doc(avatars, userId),
     doc(users, userId),

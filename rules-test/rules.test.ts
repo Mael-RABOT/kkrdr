@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, getDocs, collection, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField, Bytes } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocs, collection, collectionGroup, query, where, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField, Bytes } from 'firebase/firestore';
 
 let env: RulesTestEnvironment;
 
@@ -219,6 +219,82 @@ describe('voting', () => {
   it('owner cannot fake votes; cannot create with votes', async () => {
     await assertFails(updateDoc(doc(db('dev2'), 'poops/a1'), { votes: { bob: 1 } }));
     await assertFails(setDoc(doc(db('dev1'), 'poops/bx'), poop('bob', { votes: { alice: 1 } })));
+  });
+});
+
+describe('comments', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const d = ctx.firestore();
+      await setDoc(doc(d, 'users/carol'), { name: 'Carol', admin: false, active: true });
+      await setDoc(doc(d, 'keys/carolkey'), { userId: 'carol' });
+      await setDoc(doc(d, 'poops/a1/comments/c1'), { userId: 'bob', text: 'nice', createdAt: Timestamp.now() });
+      await updateDoc(doc(d, 'poops/a1'), { commentCount: 1 });
+    });
+    await link('dev1', 'bobkey', 'bob');
+    await link('dev2', 'alicekey', 'alice');
+    await link('dev3', 'carolkey', 'carol');
+  });
+  const comment = (userId: string, extra: object = {}) => ({ userId, text: 'hi', createdAt: serverTimestamp(), ...extra });
+  /** A comment write and a commentCount change, in one batch. */
+  const withCount = (uid: string, write: (b: ReturnType<typeof writeBatch>, d: ReturnType<typeof db>) => void, count: number) => {
+    const d = db(uid);
+    const b = writeBatch(d);
+    write(b, d);
+    b.update(doc(d, 'poops/a1'), { commentCount: count });
+    return b.commit();
+  };
+
+  it('can be read with a valid session only', async () => {
+    await assertSucceeds(getDocs(collection(db('dev3'), 'poops/a1/comments')));
+    await assertFails(getDocs(collection(db('nobody'), 'poops/a1/comments')));
+  });
+  it('can be added with the count going up by one', async () => {
+    await assertSucceeds(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('carol')), 2));
+  });
+  it('rejects a comment without the count, for someone else, too long or with extra fields', async () => {
+    await assertFails(setDoc(doc(db('dev3'), 'poops/a1/comments/c2'), comment('carol')));
+    await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('carol')), 3));
+    await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('bob')), 2));
+    await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('carol', { text: 'x'.repeat(281) })), 2));
+    await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('carol', { text: '' })), 2));
+    await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('carol', { hack: 1 })), 2));
+  });
+  it('can be edited by its author only, text only', async () => {
+    await assertSucceeds(updateDoc(doc(db('dev1'), 'poops/a1/comments/c1'), { text: 'nicer', editedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(db('dev3'), 'poops/a1/comments/c1'), { text: 'mine now', editedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(db('dev1'), 'poops/a1/comments/c1'), { userId: 'carol' }));
+  });
+  it('can be deleted by its author with the count going down', async () => {
+    await assertFails(deleteDoc(doc(db('dev1'), 'poops/a1/comments/c1')));
+    await assertFails(withCount('dev3', (b, d) => b.delete(doc(d, 'poops/a1/comments/c1')), 0));
+    await assertSucceeds(withCount('dev1', (b, d) => b.delete(doc(d, 'poops/a1/comments/c1')), 0));
+  });
+  it('can be deleted by an admin', async () => {
+    await assertSucceeds(deleteDoc(doc(db('dev2'), 'poops/a1/comments/c1')));
+  });
+  it('go with their entry when its owner deletes it, not before', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'poops/b9'), { ...poop('bob'), createdAt: Timestamp.now(), commentCount: 1 });
+      await setDoc(doc(ctx.firestore(), 'poops/b9/comments/c9'), { userId: 'carol', text: 'hey', createdAt: Timestamp.now() });
+    });
+    const d = db('dev1');
+    await assertFails(deleteDoc(doc(d, 'poops/b9/comments/c9')));
+    const b = writeBatch(d);
+    b.delete(doc(d, 'poops/b9/comments/c9'));
+    b.delete(doc(d, 'poops/b9'));
+    await assertSucceeds(b.commit());
+  });
+  it('can be listed across entries by an admin only (removing a user)', async () => {
+    const q = (uid: string) => query(collectionGroup(db(uid), 'comments'), where('userId', '==', 'bob'));
+    await assertSucceeds(getDocs(q('dev2')));
+    await assertFails(getDocs(q('dev3')));
+  });
+  it('the count cannot be faked', async () => {
+    await assertFails(updateDoc(doc(db('dev3'), 'poops/a1'), { commentCount: 3 }));
+    await assertFails(updateDoc(doc(db('dev3'), 'poops/a1'), { commentCount: -1 }));
+    await assertFails(updateDoc(doc(db('dev2'), 'poops/a1'), { commentCount: 5, size: 'S' }));
+    await assertFails(setDoc(doc(db('dev1'), 'poops/bx'), poop('bob', { commentCount: 2 })));
   });
 });
 
