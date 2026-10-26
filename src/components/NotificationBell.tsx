@@ -75,6 +75,7 @@ export default function NotificationBell() {
                           <span className="muted">{relative(c.createdAt)}</span>
                         </span>
                         <span className="notif-text">
+                          {c.sound && `🎤 ${c.text ? '' : t('comments.voice')}`}
                           <MentionText text={c.text} />
                         </span>
                       </span>

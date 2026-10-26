@@ -50,11 +50,14 @@ export interface PoopDoc extends Omit<Poop, 'id' | 'at' | 'createdAt' | 'pending
 export interface Comment {
   id: string;
   userId: string;
+  /** Empty on a voice message without text. */
   text: string;
   createdAt: Date;
   editedAt?: Date;
   /** Users tagged with @ in the text (not the author), so they can be notified. */
   mentions?: string[];
+  /** A voice message: its version and length; the audio is in poops/{poopId}/commentSounds/{id}. The text may then be empty. */
+  sound?: { v: number; secs: number };
   /** Local changes not synced yet (client only, never stored). */
   pending?: boolean;
 }

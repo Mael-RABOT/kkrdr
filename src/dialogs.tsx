@@ -74,7 +74,7 @@ function DialogView({ pending, onClose }: { pending: Pending; onClose: (ok: bool
           <button type="button" onClick={() => onClose(false)}>
             {t('common.cancel')}
           </button>
-          <button type="button" className={danger ? 'danger-fill' : gold ? 'gold' : 'primary'} onClick={() => onClose(true)} autoFocus>
+          <button type="button" className={danger ? 'danger-fill' : gold ? 'gold' : 'primary'} onClick={() => onClose(true)} data-autofocus>
             {confirmLabel ?? t('common.confirm')}
           </button>
         </div>
@@ -88,7 +88,7 @@ function DialogView({ pending, onClose }: { pending: Pending; onClose: (ok: bool
         <h2>{pending.title ?? t('common.error')}</h2>
         <p className="modal-text">{pending.message}</p>
         <div className="modal-actions">
-          <button type="button" className="primary" onClick={() => onClose(true)} autoFocus>
+          <button type="button" className="primary" onClick={() => onClose(true)} data-autofocus>
             {t('common.ok')}
           </button>
         </div>
@@ -99,7 +99,7 @@ function DialogView({ pending, onClose }: { pending: Pending; onClose: (ok: bool
   return (
     <Modal onClose={() => onClose(true)}>
       <h2>{pending.title}</h2>
-      <input readOnly value={pending.text} onFocus={(e) => e.target.select()} autoFocus />
+      <input readOnly value={pending.text} onFocus={(e) => e.target.select()} data-autofocus />
       <div className="modal-actions">
         <button type="button" onClick={() => onClose(true)}>
           {t('common.close')}

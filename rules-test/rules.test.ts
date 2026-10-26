@@ -401,6 +401,38 @@ describe('comments', () => {
     await assertSucceeds(getDocs(query(collectionGroup(db('dev3'), 'comments'), where('mentions', 'array-contains', 'carol'))));
     await assertFails(getDocs(byBob('nobody')));
   });
+  it('can be a voice message, with or without text, its audio written alongside', async () => {
+    const audio = (v: number, n = 1000) => ({ audio: Bytes.fromUint8Array(new Uint8Array(n)), type: 'audio/webm;codecs=opus', v });
+    const voice = (id: string, extra: object, rec: object | null, count = 2) =>
+      withCount('dev3', (b, d) => {
+        b.set(doc(d, `poops/a1/comments/${id}`), comment('carol', extra));
+        if (rec) b.set(doc(d, `poops/a1/commentSounds/${id}`), rec);
+      }, count);
+    await assertSucceeds(voice('v1', { text: '', sound: { v: 5, secs: 15 } }, audio(5)));
+    await assertSucceeds(voice('v2', { text: '@Bob', mentions: ['bob'], sound: { v: 6, secs: 3 } }, audio(6), 3));
+    await assertSucceeds(getDoc(doc(db('dev1'), 'poops/a1/commentSounds/v1')));
+    await assertFails(voice('v3', { text: '', sound: { v: 7, secs: 16 } }, audio(7), 4));
+    await assertFails(voice('v3', { text: '', sound: { v: 7, secs: 3 } }, audio(7, 250_001), 4));
+    await assertFails(voice('v3', { text: '', sound: { v: 7, secs: 3 } }, audio(8), 4));
+    await assertFails(voice('v3', { text: '', sound: { v: 7, secs: 3 } }, null, 4));
+    await assertFails(voice('v3', { text: 'hi' }, audio(7), 4));
+    await assertFails(setDoc(doc(db('dev3'), 'poops/a1/commentSounds/v3'), audio(7)));
+    // Never replaced, and the voice stays when the text changes.
+    await assertFails(setDoc(doc(db('dev3'), 'poops/a1/commentSounds/v1'), audio(5)));
+    await assertSucceeds(updateDoc(doc(db('dev3'), 'poops/a1/comments/v2'), { text: '', mentions: deleteField(), editedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(db('dev3'), 'poops/a1/comments/v2'), { sound: { v: 9, secs: 2 }, editedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(db('dev1'), 'poops/a1/comments/c1'), { text: '', editedAt: serverTimestamp() }));
+    // The audio goes with its comment, by its author only.
+    await assertFails(deleteDoc(doc(db('dev3'), 'poops/a1/commentSounds/v1')));
+    await assertFails(withCount('dev1', (b, d) => {
+      b.delete(doc(d, 'poops/a1/comments/v1'));
+      b.delete(doc(d, 'poops/a1/commentSounds/v1'));
+    }, 2));
+    await assertSucceeds(withCount('dev3', (b, d) => {
+      b.delete(doc(d, 'poops/a1/comments/v1'));
+      b.delete(doc(d, 'poops/a1/commentSounds/v1'));
+    }, 2));
+  });
   it('the count cannot be faked', async () => {
     await assertFails(updateDoc(doc(db('dev3'), 'poops/a1'), { commentCount: 3 }));
     await assertFails(updateDoc(doc(db('dev3'), 'poops/a1'), { commentCount: -1 }));

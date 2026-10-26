@@ -149,7 +149,7 @@ export default function PoopDetail({ poop: p, onClose, focusComments }: { poop: 
             {t('common.edit')}
           </Link>
         )}
-        <button type="button" onClick={onClose} autoFocus={!focusComments}>
+        <button type="button" onClick={onClose}>
           {t('common.close')}
         </button>
       </div>

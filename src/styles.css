@@ -1364,6 +1364,9 @@ button.link.danger {
   color: var(--text);
   box-shadow: var(--shadow-lg);
 }
+.modal:focus {
+  outline: none;
+}
 .modal[open] {
   animation: modal-in 0.16s ease-out;
 }
@@ -2820,7 +2823,17 @@ html:has(.poop-detail[open]) body {
   color: var(--accent-text);
 }
 .comment-send {
-  width: 100%;
+  flex: 1;
+}
+.comment-mic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0 14px;
+  color: var(--accent);
+}
+.comment-body .sound-player {
+  margin: 4px 0 0;
 }
 /* Between the comment box and the popup's Edit / Close. */
 .detail-comments + .modal-actions {

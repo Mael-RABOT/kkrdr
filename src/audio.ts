@@ -4,6 +4,10 @@
 export const MAX_SECS = 30;
 /** Must stay under the limit in firestore.rules (sounds). */
 export const MAX_SOUND_BYTES = 480_000;
+/** Voice comments are shorter (see the commentSound rule in firestore.rules). */
+export const COMMENT_SECS = 15;
+/** Must stay under the limit in firestore.rules (commentSounds). */
+export const MAX_COMMENT_SOUND_BYTES = 240_000;
 /** Plenty for a voice or a fart; 30 s stay around 180 KB. */
 const BITRATE = 48_000;
 
@@ -18,7 +22,7 @@ export const canRecord = typeof window !== 'undefined' && 'MediaRecorder' in win
 export class TooBig extends Error {}
 
 export interface Recording {
-  /** Resolves with the audio once stopped (by stop() or after MAX_SECS). */
+  /** Resolves with the audio once stopped (by stop() or after the time limit). */
   done: Promise<{ bytes: Uint8Array<ArrayBuffer>; type: string; secs: number }>;
   stop: () => void;
   /** Stops and throws the audio away. */
@@ -26,7 +30,7 @@ export interface Recording {
 }
 
 /** Asks for the microphone and starts recording. Throws if access is refused or unavailable. */
-export async function startRecording(): Promise<Recording> {
+export async function startRecording(maxSecs = MAX_SECS, maxBytes = MAX_SOUND_BYTES): Promise<Recording> {
   const stream = await navigator.mediaDevices.getUserMedia({
     // Phones clean speech up; they would also take out the sounds people want to share.
     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
@@ -49,8 +53,8 @@ export async function startRecording(): Promise<Recording> {
       clearTimeout(limit);
       if (cancelled) return reject(new DOMException('cancelled', 'AbortError'));
       const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'audio/webm' });
-      if (blob.size > MAX_SOUND_BYTES) return reject(new TooBig());
-      const secs = Math.min(MAX_SECS, Math.max(1, Math.round((Date.now() - started) / 1000)));
+      if (blob.size > maxBytes) return reject(new TooBig());
+      const secs = Math.min(maxSecs, Math.max(1, Math.round((Date.now() - started) / 1000)));
       resolve({ bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type, secs });
     };
   });
@@ -58,7 +62,7 @@ export async function startRecording(): Promise<Recording> {
   done.catch(() => {});
 
   const stop = () => recorder.state !== 'inactive' && recorder.stop();
-  const limit = setTimeout(stop, MAX_SECS * 1000);
+  const limit = setTimeout(stop, maxSecs * 1000);
   recorder.start(1000);
   return {
     done,

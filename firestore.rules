@@ -225,21 +225,29 @@ service cloud.firestore {
       }
 
       function validText(d) {
-        return d.text is string && d.text.size() > 0 && d.text.size() <= 280
+        return d.text is string && d.text.size() <= 280
+          // Empty only on a voice comment.
+          && (d.text.size() > 0 || 'sound' in d)
           // Who the text tags (user ids), so they can be notified.
-          && (!('mentions' in d) || (d.mentions is list && d.mentions.size() > 0 && d.mentions.size() <= 10));
+          && (!('mentions' in d) || (d.mentions is list && d.mentions.size() > 0 && d.mentions.size() <= 10))
+          // A voice message: its version (the audio is in commentSounds/) and length, up to 15 seconds.
+          && (!('sound' in d) || (d.sound is map && d.sound.keys().hasOnly(['v', 'secs'])
+              && d.sound.v is int && d.sound.secs is int && d.sound.secs >= 1 && d.sound.secs <= 15));
       }
 
       // Comments, written in the same batch as the entry's commentCount.
       match /comments/{commentId} {
         allow read: if valid();
         allow create: if valid()
-          && request.resource.data.keys().hasOnly(['userId', 'text', 'createdAt', 'mentions'])
+          && request.resource.data.keys().hasOnly(['userId', 'text', 'createdAt', 'mentions', 'sound'])
           && request.resource.data.userId == sess().userId
           && validText(request.resource.data)
+          // A voice message comes with its audio.
+          && (!('sound' in request.resource.data)
+              || existsAfter(/databases/$(database)/documents/poops/$(poopId)/commentSounds/$(commentId)))
           && request.resource.data.createdAt == request.time
           && countAfter() == countBefore() + 1;
-        // The author may change the text (and so who it tags).
+        // The author may change the text (and so who it tags), not the voice message.
         allow update: if valid()
           && resource.data.userId == sess().userId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt', 'mentions'])
@@ -254,6 +262,27 @@ service cloud.firestore {
           // On its own: by the author, the count going down.
           || (resource.data.userId == sess().userId && countAfter() < countBefore())));
       }
+    }
+
+    // A voice comment's audio, written with the comment (whose sound field names this version)
+    // and never changed after. It goes with the comment, or with the entry.
+    match /poops/{poopId}/commentSounds/{commentId} {
+      function commentPath() {
+        return /databases/$(database)/documents/poops/$(poopId)/comments/$(commentId);
+      }
+      allow read: if valid();
+      allow create: if valid()
+        && getAfter(commentPath()).data.userId == sess().userId
+        && request.resource.data.keys().hasOnly(['audio', 'type', 'v'])
+        && request.resource.data.audio is bytes
+        && request.resource.data.audio.size() <= 250000
+        && request.resource.data.type is string
+        && request.resource.data.type.size() <= 60
+        && request.resource.data.type.matches('audio/(webm|ogg|mp4|mpeg|aac)(;.*)?')
+        && request.resource.data.v == getAfter(commentPath()).data.get('sound', {}).get('v', null);
+      allow delete: if isAdmin() || (valid() && !existsAfter(commentPath())
+        && (get(commentPath()).data.userId == sess().userId
+            || get(/databases/$(database)/documents/poops/$(poopId)).data.userId == sess().userId));
     }
 
     // Across entries: the comments tagging you (notifications), and an admin removing a user

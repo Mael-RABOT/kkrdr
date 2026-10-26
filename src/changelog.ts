@@ -1,6 +1,12 @@
 /** What changed in each version, newest first. Written by hand at each release. */
 export const CHANGELOG: { version: string; items: { en: string; fr: string }[] }[] = [
   {
+    version: '1.12.0',
+    items: [
+      { en: 'Voice messages in comments, up to 15 seconds.', fr: 'Messages vocaux dans les commentaires, jusqu’à 15 secondes.' },
+    ],
+  },
+  {
     version: '1.11.0',
     items: [
       { en: 'Add a sound to an entry: record up to 30 seconds (a fart, a comment, anything).', fr: 'Ajoute un son à un poop : enregistre jusqu’à 30 secondes (un pet, un commentaire, n’importe quoi).' },

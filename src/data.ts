@@ -25,6 +25,7 @@ import {
   increment,
   collectionGroup,
   type DocumentReference,
+  type QueryDocumentSnapshot,
   type WriteBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -106,15 +107,14 @@ export function updatePoop(id: string, p: NewPoop, media: MediaChange = {}) {
   return batch.commit();
 }
 
-/** Object URLs of the photos and sounds already loaded, by collection, entry and version. */
+/** Object URLs of the photos and sounds already loaded, by path and version. */
 const mediaUrls = new Map<string, string>();
 
 /** A stored photo or sound as an object URL, or null if there is none. The local cache answers when it has that version. */
-async function getMedia(kind: 'pictures' | 'sounds', poopId: string, v: number): Promise<string | null> {
-  const key = `${kind}/${poopId}:${v}`;
+async function getMedia(ref: DocumentReference, v: number): Promise<string | null> {
+  const key = `${ref.path}:${v}`;
   const hit = mediaUrls.get(key);
   if (hit) return hit;
-  const ref = doc(kind === 'pictures' ? pictures : sounds, poopId);
   let snap = await getDocFromCache(ref).catch(() => null);
   if (!snap?.exists() || snap.data().v !== v) snap = await getDoc(ref);
   if (!snap.exists()) return null;
@@ -125,8 +125,9 @@ async function getMedia(kind: 'pictures' | 'sounds', poopId: string, v: number):
   return url;
 }
 
-export const getPicture = (poopId: string, v: number) => getMedia('pictures', poopId, v);
-export const getSound = (poopId: string, v: number) => getMedia('sounds', poopId, v);
+export const getPicture = (poopId: string, v: number) => getMedia(doc(pictures, poopId), v);
+export const getSound = (poopId: string, v: number) => getMedia(doc(sounds, poopId), v);
+export const getCommentSound = (poopId: string, commentId: string, v: number) => getMedia(commentSound(poopId, commentId), v);
 
 /** One entry, or null if it does not exist. The local cache answers first, so a bad connection doesn't stall. */
 export async function getPoop(id: string): Promise<Poop | null> {
@@ -140,7 +141,10 @@ export async function getPoop(id: string): Promise<Poop | null> {
 export async function deletePoop(id: string) {
   const thread = await getDocs(commentsOf(id));
   const batch = writeBatch(db);
-  thread.docs.forEach((d) => batch.delete(d.ref));
+  thread.docs.forEach((d) => {
+    if (d.data().sound) batch.delete(commentSound(id, d.id));
+    batch.delete(d.ref);
+  });
   batch.delete(doc(pictures, id));
   batch.delete(doc(sounds, id));
   batch.delete(doc(poops, id));
@@ -201,9 +205,12 @@ export function vote(poopId: string, userId: string, value: 1 | -1 | null) {
 /** An entry's comments: poops/{id}/comments. The entry's commentCount changes in the same batch. */
 const commentsOf = (poopId: string) => collection(poops, poopId, 'comments');
 
+/** A voice comment's audio, apart from it (poops/{id}/commentSounds/{commentId}) so threads stay light. */
+const commentSound = (poopId: string, commentId: string) => doc(poops, poopId, 'commentSounds', commentId);
+
 function toComment(snap: DocumentSnapshot): Comment {
-  const d = snap.data({ serverTimestamps: 'estimate' }) as { userId: string; text: string; createdAt: Timestamp; editedAt?: Timestamp; mentions?: string[] };
-  const c: Comment = { id: snap.id, userId: d.userId, text: d.text, createdAt: d.createdAt.toDate(), editedAt: d.editedAt?.toDate(), mentions: d.mentions };
+  const d = snap.data({ serverTimestamps: 'estimate' }) as Omit<Comment, 'id' | 'createdAt' | 'editedAt'> & { createdAt: Timestamp; editedAt?: Timestamp };
+  const c: Comment = { id: snap.id, userId: d.userId, text: d.text, createdAt: d.createdAt.toDate(), editedAt: d.editedAt?.toDate(), mentions: d.mentions, sound: d.sound };
   if (snap.metadata.hasPendingWrites) c.pending = true;
   return c;
 }
@@ -218,10 +225,17 @@ export function subscribeComments(poopId: string, cb: (c: Comment[]) => void, on
   );
 }
 
-/** `mentions`: who the text tags (see mentionedIds), stored so they can find it. */
-export function addComment(poopId: string, userId: string, text: string, mentions: string[]) {
+/** `mentions`: who the text tags (see mentionedIds), stored so they can find it. `sound`: a voice message, with or without text. */
+export function addComment(poopId: string, userId: string, text: string, mentions: string[], sound?: Sound) {
   const batch = writeBatch(db);
-  batch.set(doc(commentsOf(poopId)), { userId, text, createdAt: serverTimestamp(), ...(mentions.length && { mentions }) });
+  const ref = doc(commentsOf(poopId));
+  const data: Record<string, unknown> = { userId, text, createdAt: serverTimestamp(), ...(mentions.length && { mentions }) };
+  if (sound) {
+    const v = Date.now();
+    batch.set(commentSound(poopId, ref.id), { audio: Bytes.fromUint8Array(sound.bytes), type: sound.type, v });
+    data.sound = { v, secs: sound.secs };
+  }
+  batch.set(ref, data);
   batch.update(doc(poops, poopId), { commentCount: increment(1) });
   return batch.commit();
 }
@@ -230,9 +244,10 @@ export function editComment(poopId: string, id: string, text: string, mentions: 
   return updateDoc(doc(commentsOf(poopId), id), { text, mentions: mentions.length ? mentions : deleteField(), editedAt: serverTimestamp() });
 }
 
-export function deleteComment(poopId: string, id: string) {
+export function deleteComment(poopId: string, c: Comment) {
   const batch = writeBatch(db);
-  batch.delete(doc(commentsOf(poopId), id));
+  if (c.sound) batch.delete(commentSound(poopId, c.id));
+  batch.delete(doc(commentsOf(poopId), c.id));
   batch.update(doc(poops, poopId), { commentCount: increment(-1) });
   return batch.commit();
 }
@@ -391,17 +406,17 @@ export async function countPoops(userId: string): Promise<number> {
  * Every comment a user wrote. The collection group query needs its single-field index
  * (firestore.indexes.json); until that is deployed and built, it falls back to querying each thread.
  */
-async function commentsBy(userId: string): Promise<DocumentReference[]> {
+async function commentsBy(userId: string): Promise<QueryDocumentSnapshot[]> {
   try {
     const snap = await getDocs(query(collectionGroup(db, 'comments'), where('userId', '==', userId)));
-    return snap.docs.map((c) => c.ref);
+    return snap.docs;
   } catch (e) {
     if ((e as { code?: string }).code !== 'failed-precondition') throw e;
     const all = await getDocs(poops);
     const threads = await Promise.all(
       all.docs.map((d) => getDocs(query(commentsOf(d.id), where('userId', '==', userId)))),
     );
-    return threads.flatMap((t) => t.docs.map((c) => c.ref));
+    return threads.flatMap((t) => t.docs);
   }
 }
 
@@ -418,23 +433,26 @@ export async function removeUser(userId: string) {
   const own = new Set(entries.docs.map((d) => d.id));
 
   // Comments on other people's entries: one batch per entry, so its count goes down with them.
-  const byPoop = new Map<string, DocumentReference[]>();
-  for (const ref of written) {
-    const poopId = ref.parent.parent!.id;
+  const byPoop = new Map<string, QueryDocumentSnapshot[]>();
+  for (const c of written) {
+    const poopId = c.ref.parent.parent!.id;
     if (own.has(poopId)) continue;
-    byPoop.set(poopId, [...(byPoop.get(poopId) ?? []), ref]);
+    byPoop.set(poopId, [...(byPoop.get(poopId) ?? []), c]);
   }
-  for (const [poopId, refs] of byPoop) {
+  for (const [poopId, thread] of byPoop) {
     const batch = writeBatch(db);
-    refs.forEach((r) => batch.delete(r));
-    batch.update(doc(poops, poopId), { commentCount: increment(-refs.length) });
+    thread.forEach((c) => {
+      if (c.data().sound) batch.delete(commentSound(poopId, c.id));
+      batch.delete(c.ref);
+    });
+    batch.update(doc(poops, poopId), { commentCount: increment(-thread.length) });
     await batch.commit();
   }
 
   const threads = await Promise.all(entries.docs.map((d) => getDocs(commentsOf(d.id))));
   const refs = [
     // Each thread, photo and sound goes before its entry, in the same batch or an earlier one.
-    ...entries.docs.flatMap((d, i) => [...threads[i].docs.map((c) => c.ref), doc(pictures, d.id), doc(sounds, d.id), d.ref]),
+    ...entries.docs.flatMap((d, i) => [...threads[i].docs.flatMap((c) => (c.data().sound ? [commentSound(d.id, c.id), c.ref] : [c.ref])), doc(pictures, d.id), doc(sounds, d.id), d.ref]),
     ...userKeys.map((k) => doc(keys, k)),
     doc(avatars, userId),
     doc(users, userId),

@@ -1,18 +1,25 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type Ref } from 'react';
 import { Link } from 'react-router-dom';
-import { addComment, deleteComment, editComment, subscribeComments } from '../data';
+import { canRecord, COMMENT_SECS, MAX_COMMENT_SOUND_BYTES } from '../audio';
+import { addComment, deleteComment, editComment, getCommentSound, subscribeComments, type Sound } from '../data';
 import { useDialogs } from '../dialogs';
 import { dayLabel, timeOfDay } from '../format';
 import { useT } from '../i18n';
 import { mentionedIds, mentionQuery, splitMentions, suggest } from '../mentions';
 import { useSession } from '../session';
 import type { Comment, Poop, User } from '../types';
+import { useRecorder } from '../useRecorder';
 import { useProfilePath } from '../users';
 import Avatar from './Avatar';
+import { MicIcon, RecordingBar } from './SoundField';
+import { SoundPlayer } from './SoundPlayer';
 
 const MAX = 280;
 
-/** An entry's comments in its popup: the list, and a box to add one. Authors may edit or delete theirs. */
+/**
+ * An entry's comments in its popup: the list, and a box to add one, with text, a voice message, or
+ * both (the text can still tag people). Authors may edit or delete theirs.
+ */
 export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; autoFocus?: boolean; onNavigate: () => void }) {
   const t = useT();
   const dialogs = useDialogs();
@@ -21,40 +28,55 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [text, setText] = useState('');
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [voice, setVoice] = useState<{ sound: Sound; preview: string } | null>(null);
   const section = useRef<HTMLElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const recorder = useRecorder({
+    maxSecs: COMMENT_SECS,
+    maxBytes: MAX_COMMENT_SOUND_BYTES,
+    onDone: (sound) => setVoice({ sound, preview: URL.createObjectURL(new Blob([sound.bytes], { type: sound.type })) }),
+  });
+  const preview = voice?.preview;
+
+  // Free the preview once sent or thrown away.
+  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
 
   useEffect(() => subscribeComments(poop.id, setComments, (e) => dialogs.alert(e.message)), [poop.id, dialogs]);
 
-  // Opened from the feed's comment button: go straight to the box.
+  // Opened from the feed's comment button: go straight to the box, once the popup is open.
   useEffect(() => {
     if (!autoFocus) return;
-    input.current?.focus();
-    section.current?.scrollIntoView({ block: 'end' });
+    const id = requestAnimationFrame(() => {
+      input.current?.focus();
+      section.current?.scrollIntoView({ block: 'end' });
+    });
+    return () => cancelAnimationFrame(id);
   }, [autoFocus]);
 
   const fail = (e: unknown) => dialogs.alert(e instanceof Error ? e.message : String(e));
 
   function send() {
     const v = text.trim();
-    if (!me || !v) return;
+    if (!me || (!v && !voice) || recorder.recording) return;
     // Queued offline like other writes: clear the box at once.
-    addComment(poop.id, me.id, v, mentionedIds(v, users.values(), me.id)).catch(fail);
+    addComment(poop.id, me.id, v, mentionedIds(v, users.values(), me.id), voice?.sound).catch(fail);
     setText('');
+    setVoice(null);
   }
 
   function save() {
     if (!editing || !me) return;
     const v = editing.text.trim();
-    if (!v) return;
-    const before = comments?.find((c) => c.id === editing.id)?.text;
-    if (v !== before) editComment(poop.id, editing.id, v, mentionedIds(v, users.values(), me.id)).catch(fail);
+    const before = comments?.find((c) => c.id === editing.id);
+    // Only a voice message may be left without text.
+    if (!v && !before?.sound) return;
+    if (v !== before?.text) editComment(poop.id, editing.id, v, mentionedIds(v, users.values(), me.id)).catch(fail);
     setEditing(null);
   }
 
   async function remove(c: Comment) {
     const ok = await dialogs.confirm({ title: t('comments.deleteTitle'), message: t('comments.confirmDelete'), confirmLabel: t('common.delete'), danger: true });
-    if (ok) deleteComment(poop.id, c.id).catch(fail);
+    if (ok) deleteComment(poop.id, c).catch(fail);
   }
 
   /** Tags the author in the box, unless they already are. */
@@ -111,7 +133,7 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
                           <button type="button" className="sm" onClick={() => setEditing(null)}>
                             {t('common.cancel')}
                           </button>
-                          <button type="submit" className="sm primary" disabled={!editing.text.trim()}>
+                          <button type="submit" className="sm primary" disabled={!editing.text.trim() && !c.sound}>
                             {t('log.save')}
                           </button>
                         </>
@@ -119,9 +141,12 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
                     />
                   ) : (
                     <>
-                      <p className="comment-text">
-                        <MentionText text={c.text} onNavigate={onNavigate} />
-                      </p>
+                      {c.sound && <SoundPlayer key={c.sound.v} secs={c.sound.secs} load={() => getCommentSound(poop.id, c.id, c.sound!.v)} />}
+                      {c.text && (
+                        <p className="comment-text">
+                          <MentionText text={c.text} onNavigate={onNavigate} />
+                        </p>
+                      )}
                       <span className="comment-actions">
                         {!mine && name && (
                           <button type="button" className="link" onClick={() => reply(c)}>
@@ -152,13 +177,42 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
         value={text}
         onChange={setText}
         onSubmit={send}
-        placeholder={t('comments.placeholder')}
+        placeholder={voice ? t('comments.voicePlaceholder') : t('comments.placeholder')}
+        top={
+          recorder.recording ? (
+            <RecordingBar recording={recorder.recording} elapsed={recorder.elapsed} maxSecs={COMMENT_SECS} />
+          ) : (
+            voice && (
+              <div className="sound-chosen">
+                <SoundPlayer key={voice.preview} secs={voice.sound.secs} load={async () => voice.preview} />
+                <button type="button" className="link danger" onClick={() => setVoice(null)}>
+                  {t('sound.remove')}
+                </button>
+              </div>
+            )
+          )
+        }
         actions={
-          <button type="submit" className="primary comment-send" disabled={!text.trim()}>
-            {t('comments.send')}
-          </button>
+          <>
+            {canRecord && !voice && !recorder.recording && (
+              <button
+                type="button"
+                className="comment-mic"
+                onClick={recorder.start}
+                disabled={recorder.starting}
+                aria-label={t('comments.record', { n: COMMENT_SECS })}
+                title={t('comments.record', { n: COMMENT_SECS })}
+              >
+                <MicIcon size={20} />
+              </button>
+            )}
+            <button type="submit" className="primary comment-send" disabled={(!text.trim() && !voice) || !!recorder.recording}>
+              {t('comments.send')}
+            </button>
+          </>
         }
       />
+      {recorder.error && <p className="error">{recorder.error}</p>}
     </section>
   );
 }
@@ -191,6 +245,7 @@ function CommentBox({
   onChange,
   onSubmit,
   actions,
+  top,
   placeholder,
   autoFocus,
   ref,
@@ -199,6 +254,8 @@ function CommentBox({
   onChange: (v: string) => void;
   onSubmit: () => void;
   actions: ReactNode;
+  /** Above the box: a voice message being recorded or ready to send. */
+  top?: ReactNode;
   placeholder?: string;
   autoFocus?: boolean;
   ref?: Ref<HTMLTextAreaElement>;
@@ -257,6 +314,7 @@ function CommentBox({
 
   return (
     <form className="comment-form" onSubmit={submit}>
+      {top}
       <textarea
         ref={setRefs}
         value={value}
