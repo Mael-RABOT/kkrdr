@@ -1,10 +1,11 @@
 {
   "name": "kkrdr",
   "private": true,
-  "version": "1.9.0",
+  "version": "1.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:host": "vite --host",
     "dev:emu": "VITE_USE_EMULATORS=true vite",
     "emulators": "firebase emulators:start --project demo-kkrdr --only firestore,auth",
     "seed": "node scripts/seed-emulator.mjs",

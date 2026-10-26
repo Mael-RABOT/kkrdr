@@ -6,6 +6,7 @@ function value(v) {
   if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (typeof v === 'boolean') return { booleanValue: v };
   if (Number.isInteger(v)) return { integerValue: String(v) };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(value) } };
   if (v && typeof v === 'object')
     return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, value(x)])) } };
   return { stringValue: String(v) };

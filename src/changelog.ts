@@ -1,6 +1,13 @@
 /** What changed in each version, newest first. Written by hand at each release. */
 export const CHANGELOG: { version: string; items: { en: string; fr: string }[] }[] = [
   {
+    version: '1.10.0',
+    items: [
+      { en: 'Add a picture to an entry: from the camera, the gallery, or a GIF searched right in the app.', fr: 'Ajoute une image à un poop : appareil photo, galerie, ou un GIF cherché directement dans l’app.' },
+      { en: 'Not a picture of the poop itself: it’s for context, like what you ate, your face or the view.', fr: 'Pas de photo du caca lui-même : c’est pour le contexte, comme ce que tu as mangé, ta tête ou la vue.' },
+    ],
+  },
+  {
     version: '1.9.0',
     items: [
       { en: 'Notifications: the notification icon in the header lists the comments that tag you, with a count of new ones.', fr: 'Notification dans la top bar' },

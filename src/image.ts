@@ -35,3 +35,32 @@ export async function encodeCrop(image: ImageBitmap, crop: Crop): Promise<{ byte
   }
   throw new Error('image too large');
 }
+
+/** Longest side tried for a post photo, largest first, until it fits. */
+const PHOTO_SIDES = [1080, 900, 720];
+/** Must stay under the limit in firestore.rules (pictures). */
+export const PHOTO_MAX_BYTES = 250_000;
+
+/** Shrinks a photo for a post, whole (no crop), and compresses it like encodeCrop. */
+export async function encodePhoto(file: File): Promise<{ bytes: Uint8Array<ArrayBuffer>; type: string }> {
+  const image = await loadImage(file);
+  try {
+    for (const side of PHOTO_SIDES) {
+      const scale = Math.min(1, side / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      const ctx = canvas.getContext('2d')!;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.8, 0.65, 0.5]) {
+        let blob = await toBlob(canvas, 'image/webp', quality);
+        if (!blob || blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', quality);
+        if (blob && blob.size <= PHOTO_MAX_BYTES) return { bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type };
+      }
+    }
+  } finally {
+    image.close();
+  }
+  throw new Error('image too large');
+}

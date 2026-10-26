@@ -79,7 +79,8 @@ service cloud.firestore {
     function validPoop(d) {
       return d.keys().hasAll(['userId', 'at', 'type', 'size', 'place', 'createdAt'])
         && d.keys().hasOnly(['userId', 'at', 'type', 'size', 'place', 'placeNote',
-                             'duration', 'rating', 'color', 'note', 'createdAt', 'votes', 'perfect', 'commentCount'])
+                             'duration', 'rating', 'color', 'note', 'createdAt', 'votes', 'perfect', 'commentCount',
+                             'photo', 'gif'])
         && d.at is timestamp
         // Generous margin: a phone clock or time zone set wrong must not block logging (the app checks too).
         && d.at <= request.time + duration.value(1, 'd')
@@ -92,13 +93,36 @@ service cloud.firestore {
         && optIntRange(d, 'rating', 1, 5)
         && (!('color' in d) || d.color in ['brown', 'dark', 'light', 'yellow', 'green', 'red', 'black', 'grey'])
         // A Perfect is always smooth (type 4) rated 5.
-        && (!('perfect' in d) || (d.perfect == true && d.type == 4 && d.rating == 5));
+        && (!('perfect' in d) || (d.perfect == true && d.type == 4 && d.rating == 5))
+        // A photo (its version; the image is in pictures/) or a GIF from Tenor or GIPHY, not both.
+        // Same pattern as STORED in src/gifs.ts.
+        && (!('photo' in d) || d.photo is int)
+        && (!('gif' in d) || (d.gif is string && d.gif.size() <= 500
+            && d.gif.matches('https://((media[0-9]*|c)[.]tenor[.]com|(media[0-9]*|i)[.]giphy[.]com)/[^ ]+|https://tenor[.]com/[^ ]+[.]gif')))
+        && !('photo' in d && 'gif' in d);
     }
 
     // votes is a map { userId: 1 | -1 }; a vote may only add, change or remove your own entry.
     function validVote(before, after, me) {
       return after.diff(before).affectedKeys().hasOnly([me])
         && (!(me in after) || after[me] in [1, -1]);
+    }
+
+    // An entry's photo, written by its owner in the same batch as the entry, whose photo field
+    // names this version. It goes with the entry.
+    match /pictures/{poopId} {
+      function entry() {
+        return /databases/$(database)/documents/poops/$(poopId);
+      }
+      allow read: if valid();
+      allow create, update: if valid()
+        && getAfter(entry()).data.userId == sess().userId
+        && request.resource.data.keys().hasOnly(['img', 'type', 'v'])
+        && request.resource.data.img is bytes
+        && request.resource.data.img.size() <= 260000
+        && request.resource.data.type in ['image/webp', 'image/jpeg']
+        && request.resource.data.v == getAfter(entry()).data.get('photo', null);
+      allow delete: if isAdmin() || (valid() && get(entry()).data.userId == sess().userId);
     }
 
     // Profile pictures: a small image per user, written only by its owner.

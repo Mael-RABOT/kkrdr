@@ -17,7 +17,6 @@ import {
   where,
   writeBatch,
   type DocumentSnapshot,
-  addDoc,
   updateDoc,
   deleteField,
   setDoc,
@@ -26,6 +25,7 @@ import {
   increment,
   collectionGroup,
   type DocumentReference,
+  type WriteBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Report, ReportData } from './reports';
@@ -47,19 +47,65 @@ export type NewPoop = Omit<Poop, 'id' | 'userId' | 'createdAt'>;
 /** Feed order: when it happened, or when it was posted. */
 export type FeedSort = 'at' | 'createdAt';
 
-export function addPoop(userId: string, p: NewPoop) {
-  const data: Record<string, unknown> = { ...p, userId, at: Timestamp.fromDate(p.at), createdAt: serverTimestamp() };
-  for (const k of Object.keys(data)) if (data[k] === undefined || data[k] === '') delete data[k];
-  return addDoc(poops, data);
+/** A compressed photo for an entry (see encodePhoto). */
+export type Photo = { bytes: Uint8Array<ArrayBuffer>; type: string };
+
+/** Photos live apart from their entry (pictures/{poopId}), so lists of entries stay light. */
+const pictures = collection(db, 'pictures');
+
+/** Stores a photo in the batch; returns the version to put on the entry. */
+function setPicture(batch: WriteBatch, poopId: string, photo: Photo): number {
+  const v = Date.now();
+  batch.set(doc(pictures, poopId), { img: Bytes.fromUint8Array(photo.bytes), type: photo.type, v });
+  return v;
 }
 
-const OPTIONAL = ['placeNote', 'duration', 'rating', 'color', 'note', 'perfect'] as const;
+/** A new entry, with its photo in the same batch. */
+export function addPoop(userId: string, p: NewPoop, photo?: Photo) {
+  const ref = doc(poops);
+  const batch = writeBatch(db);
+  const data: Record<string, unknown> = { ...p, userId, at: Timestamp.fromDate(p.at), createdAt: serverTimestamp() };
+  if (photo) data.photo = setPicture(batch, ref.id, photo);
+  for (const k of Object.keys(data)) if (data[k] === undefined || data[k] === '') delete data[k];
+  batch.set(ref, data);
+  return batch.commit();
+}
 
-/** Owner edit: every field is rewritten, empty optional ones removed. Votes, author and createdAt stay. */
-export function updatePoop(id: string, p: NewPoop) {
+const OPTIONAL = ['placeNote', 'duration', 'rating', 'color', 'note', 'perfect', 'gif'] as const;
+
+/**
+ * Owner edit: every field is rewritten, empty optional ones removed. Votes, author and createdAt stay.
+ * `photo`: a new one, null to remove it, undefined to keep it as is.
+ */
+export function updatePoop(id: string, p: NewPoop, photo?: Photo | null) {
+  const batch = writeBatch(db);
   const data: Record<string, unknown> = { at: Timestamp.fromDate(p.at), type: p.type, size: p.size, place: p.place };
   for (const k of OPTIONAL) data[k] = p[k] === undefined || p[k] === '' ? deleteField() : p[k];
-  return updateDoc(doc(poops, id), data);
+  if (photo) data.photo = setPicture(batch, id, photo);
+  else if (photo === null) {
+    data.photo = deleteField();
+    batch.delete(doc(pictures, id));
+  }
+  batch.update(doc(poops, id), data);
+  return batch.commit();
+}
+
+/** Object URLs of the photos already loaded, by entry and version. */
+const pictureUrls = new Map<string, string>();
+
+/** An entry's photo as an object URL, or null if there is none. The local cache answers when it has that version. */
+export async function getPicture(poopId: string, v: number): Promise<string | null> {
+  const key = `${poopId}:${v}`;
+  const hit = pictureUrls.get(key);
+  if (hit) return hit;
+  const ref = doc(pictures, poopId);
+  let snap = await getDocFromCache(ref).catch(() => null);
+  if (!snap?.exists() || snap.data().v !== v) snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const d = snap.data() as { img: Bytes; type: string };
+  const url = URL.createObjectURL(new Blob([d.img.toUint8Array() as Uint8Array<ArrayBuffer>], { type: d.type }));
+  pictureUrls.set(key, url);
+  return url;
 }
 
 /** One entry, or null if it does not exist. The local cache answers first, so a bad connection doesn't stall. */
@@ -75,6 +121,7 @@ export async function deletePoop(id: string) {
   const thread = await getDocs(commentsOf(id));
   const batch = writeBatch(db);
   thread.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(doc(pictures, id));
   batch.delete(doc(poops, id));
   return batch.commit();
 }
@@ -365,8 +412,8 @@ export async function removeUser(userId: string) {
 
   const threads = await Promise.all(entries.docs.map((d) => getDocs(commentsOf(d.id))));
   const refs = [
-    // Each thread goes before its entry, in the same batch or an earlier one.
-    ...entries.docs.flatMap((d, i) => [...threads[i].docs.map((c) => c.ref), d.ref]),
+    // Each thread and photo goes before its entry, in the same batch or an earlier one.
+    ...entries.docs.flatMap((d, i) => [...threads[i].docs.map((c) => c.ref), doc(pictures, d.id), d.ref]),
     ...userKeys.map((k) => doc(keys, k)),
     doc(avatars, userId),
     doc(users, userId),

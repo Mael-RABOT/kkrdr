@@ -1,11 +1,12 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import type { NewPoop } from '../data';
+import type { NewPoop, Photo } from '../data';
 import { useDialogs } from '../dialogs';
 import { fmtNum, toLocalInput } from '../format';
 import { baseScore } from '../game';
 import { useT, type Key } from '../i18n';
 import { PLACE_IDS, SIZE_IDS, type Color, type Place, type Poop, type Size } from '../types';
 import ColorPicker from './ColorPicker';
+import PictureField, { initialAttachment, type Attachment } from './PictureField';
 import Segmented from './Segmented';
 import TypePicker from './TypePicker';
 
@@ -15,7 +16,8 @@ interface Props {
   /** Entry being edited; a new one starts from now, smooth, medium, at home. */
   initial?: Poop;
   submitLabel: string;
-  onSave: (p: NewPoop) => void;
+  /** `photo`: a new one, null to remove the current one, undefined to leave it. */
+  onSave: (p: NewPoop, photo?: Photo | null) => void;
   /** Extra content under the save button (e.g. delete on the edit page). */
   footer?: ReactNode;
 }
@@ -36,6 +38,7 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
   const [color, setColor] = useState<Color | undefined>(initial?.color);
   const [perfect, setPerfect] = useState(initial?.perfect ?? false);
   const [note, setNote] = useState(initial?.note ?? '');
+  const [attachment, setAttachment] = useState<Attachment>(() => initialAttachment(initial));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ready = !!type && !!size && !!place && (perfect || !!rating) && !!note.trim();
@@ -50,6 +53,8 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
     const mins = duration.trim() ? Number(duration.replace(',', '.')) : undefined;
     if (mins !== undefined && !Number.isFinite(mins)) return setError(t('log.invalidDuration'));
     setBusy(true);
+    // The current photo goes when it is removed or replaced by a GIF.
+    const photo = attachment.kind === 'photo' ? attachment.photo : attachment.kind === 'current' || !initial?.photo ? undefined : null;
     onSave({
       at: date,
       // A Perfect always counts as smooth, rated 5/5.
@@ -62,7 +67,8 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
       color,
       perfect: perfect || undefined,
       note: note.trim(),
-    });
+      gif: attachment.kind === 'gif' ? attachment.url : undefined,
+    }, photo);
   }
 
   async function togglePerfect() {
@@ -154,6 +160,11 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
             <span className="label">{t('log.note')}</span>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={280} rows={2} required />
           </label>
+        </section>
+
+        <section className="card form-picture">
+          <h2>{t('log.picture')}</h2>
+          <PictureField entry={initial} value={attachment} onChange={setAttachment} />
         </section>
       </div>
 

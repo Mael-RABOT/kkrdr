@@ -107,6 +107,62 @@ describe('as a regular user', () => {
   });
 });
 
+describe('entry pictures', () => {
+  beforeEach(async () => {
+    await link('dev1', 'bobkey', 'bob');
+    await link('dev2', 'alicekey', 'alice');
+  });
+  const img = (v: number, n = 1000, type = 'image/webp') => ({ img: Bytes.fromUint8Array(new Uint8Array(n)), type, v });
+  /** An entry and its photo, in one batch, as the app writes them. */
+  const withPhoto = (uid: string, owner: string, id: string, v: number, pic: object, entry: object = {}) => {
+    const d = db(uid);
+    const b = writeBatch(d);
+    b.set(doc(d, `poops/${id}`), poop(owner, { photo: v, ...entry }));
+    b.set(doc(d, `pictures/${id}`), pic);
+    return b.commit();
+  };
+
+  it('can be added with its entry by the owner, and read with a valid session', async () => {
+    await assertSucceeds(withPhoto('dev1', 'bob', 'b1', 5, img(5)));
+    await assertSucceeds(getDoc(doc(db('dev2'), 'pictures/b1')));
+    await assertFails(getDoc(doc(db('nobody'), 'pictures/b1')));
+  });
+  it('rejects a photo too big, of the wrong type, of another version or without its entry', async () => {
+    await assertFails(withPhoto('dev1', 'bob', 'b1', 5, img(5, 260_001)));
+    await assertFails(withPhoto('dev1', 'bob', 'b1', 5, img(5, 1000, 'image/png')));
+    await assertFails(withPhoto('dev1', 'bob', 'b1', 5, img(6)));
+    await assertFails(withPhoto('dev1', 'bob', 'b1', 5, { ...img(5), extra: 1 }));
+    await assertFails(setDoc(doc(db('dev1'), 'pictures/b1'), img(5)));
+  });
+  it('cannot be put on someone else\'s entry', async () => {
+    const d = db('dev1');
+    const b = writeBatch(d);
+    b.update(doc(d, 'poops/a1'), { photo: 5 });
+    b.set(doc(d, 'pictures/a1'), img(5));
+    await assertFails(b.commit());
+  });
+  it('can be replaced or removed by the owner with the entry', async () => {
+    await assertSucceeds(withPhoto('dev1', 'bob', 'b1', 5, img(5)));
+    const d = db('dev1');
+    let b = writeBatch(d);
+    b.update(doc(d, 'poops/b1'), { photo: 6 });
+    b.set(doc(d, 'pictures/b1'), img(6));
+    await assertSucceeds(b.commit());
+    b = writeBatch(d);
+    b.update(doc(d, 'poops/b1'), { photo: deleteField() });
+    b.delete(doc(d, 'pictures/b1'));
+    await assertSucceeds(b.commit());
+  });
+  it('accepts a Tenor or GIPHY GIF instead, never both', async () => {
+    await assertSucceeds(setDoc(doc(db('dev1'), 'poops/g1'), poop('bob', { gif: 'https://media2.giphy.com/media/abc/200.webp' })));
+    await assertSucceeds(setDoc(doc(db('dev1'), 'poops/g4'), poop('bob', { gif: 'https://tenor.com/view/happy-cat-gif-108.gif' })));
+    await assertSucceeds(setDoc(doc(db('dev1'), 'poops/g5'), poop('bob', { gif: 'https://media1.tenor.com/m/lfD/happy-cat.gif' })));
+    await assertFails(setDoc(doc(db('dev1'), 'poops/g2'), poop('bob', { gif: 'https://evil.example.com/x.gif' })));
+    await assertFails(setDoc(doc(db('dev1'), 'poops/g6'), poop('bob', { gif: 'https://tenor.com/search/cat-gifs' })));
+    await assertFails(withPhoto('dev1', 'bob', 'g3', 5, img(5), { gif: 'https://media.giphy.com/media/abc/200.webp' }));
+  });
+});
+
 describe('avatars', () => {
   beforeEach(() => link('dev1', 'bobkey', 'bob'));
   const pic = (n = 1000, type = 'image/webp') => ({ img: Bytes.fromUint8Array(new Uint8Array(n)), type, updatedAt: serverTimestamp() });

@@ -8,6 +8,7 @@ import Avatar from './Avatar';
 import { ColorDot } from './ColorPicker';
 import Comments from './Comments';
 import Modal from './Modal';
+import PostMedia from './PostMedia';
 import ScorePill from './ScorePill';
 import TypeIcon from './TypeIcon';
 import VoteButtons from './VoteButtons';
@@ -62,6 +63,8 @@ export default function PoopDetail({ poop: p, onClose, focusComments }: { poop: 
         </Link>
         <ScorePill poop={p} big />
       </div>
+
+      <PostMedia poop={p} />
 
       <dl className="detail-fields">
         <div>

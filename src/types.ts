@@ -29,6 +29,10 @@ export interface Poop {
   perfect?: boolean;
   /** When it was posted (server time). */
   createdAt?: Date;
+  /** A photo for context (not of the poop): its version, the image itself is in pictures/{id}. */
+  photo?: number;
+  /** Or a GIF, by its GIPHY URL. */
+  gif?: string;
   /** How many comments, kept in step with the comments subcollection. */
   commentCount?: number;
   /** Local changes not synced yet (client only, never stored). */
