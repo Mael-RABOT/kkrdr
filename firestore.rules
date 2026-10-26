@@ -80,7 +80,7 @@ service cloud.firestore {
       return d.keys().hasAll(['userId', 'at', 'type', 'size', 'place', 'createdAt'])
         && d.keys().hasOnly(['userId', 'at', 'type', 'size', 'place', 'placeNote',
                              'duration', 'rating', 'color', 'note', 'createdAt', 'votes', 'perfect', 'commentCount',
-                             'photo', 'gif'])
+                             'photo', 'gif', 'sound'])
         && d.at is timestamp
         // Generous margin: a phone clock or time zone set wrong must not block logging (the app checks too).
         && d.at <= request.time + duration.value(1, 'd')
@@ -99,7 +99,10 @@ service cloud.firestore {
         && (!('photo' in d) || d.photo is int)
         && (!('gif' in d) || (d.gif is string && d.gif.size() <= 500
             && d.gif.matches('https://((media[0-9]*|c)[.]tenor[.]com|(media[0-9]*|i)[.]giphy[.]com)/[^ ]+|https://tenor[.]com/[^ ]+[.]gif')))
-        && !('photo' in d && 'gif' in d);
+        && !('photo' in d && 'gif' in d)
+        // A recording: its version (the audio is in sounds/) and length, up to 30 seconds.
+        && (!('sound' in d) || (d.sound is map && d.sound.keys().hasOnly(['v', 'secs'])
+            && d.sound.v is int && d.sound.secs is int && d.sound.secs >= 1 && d.sound.secs <= 30));
     }
 
     // votes is a map { userId: 1 | -1 }; a vote may only add, change or remove your own entry.
@@ -123,6 +126,25 @@ service cloud.firestore {
         && request.resource.data.type in ['image/webp', 'image/jpeg']
         && request.resource.data.v == getAfter(entry()).data.get('photo', null);
       allow delete: if isAdmin() || (valid() && get(entry()).data.userId == sess().userId);
+    }
+
+    // An entry's sound recording: same as its photo. Audio as recorded by the browser
+    // (Opus in WebM / Ogg, or AAC in MP4 on Apple devices).
+    match /sounds/{poopId} {
+      function soundEntry() {
+        return /databases/$(database)/documents/poops/$(poopId);
+      }
+      allow read: if valid();
+      allow create, update: if valid()
+        && getAfter(soundEntry()).data.userId == sess().userId
+        && request.resource.data.keys().hasOnly(['audio', 'type', 'v'])
+        && request.resource.data.audio is bytes
+        && request.resource.data.audio.size() <= 500000
+        && request.resource.data.type is string
+        && request.resource.data.type.size() <= 60
+        && request.resource.data.type.matches('audio/(webm|ogg|mp4|mpeg|aac)(;.*)?')
+        && request.resource.data.v == getAfter(soundEntry()).data.get('sound', {}).get('v', null);
+      allow delete: if isAdmin() || (valid() && get(soundEntry()).data.userId == sess().userId);
     }
 
     // Profile pictures: a small image per user, written only by its owner.

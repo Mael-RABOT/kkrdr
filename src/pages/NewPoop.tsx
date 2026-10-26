@@ -17,10 +17,10 @@ export default function NewPoop() {
       <PageHead title={t('log.title')} />
       <PoopForm
         submitLabel={t('log.save')}
-        onSave={(p, photo) => {
+        onSave={(p, media) => {
           if (!me) return;
           // Not awaited: the local cache shows the entry right away and syncs it when online.
-          addPoop(me.id, p, photo ?? undefined).catch((err) => dialogs.alert(t('log.saveFailed', { msg: err instanceof Error ? err.message : String(err) })));
+          addPoop(me.id, p, media).catch((err) => dialogs.alert(t('log.saveFailed', { msg: err instanceof Error ? err.message : String(err) })));
           navigate('/');
         }}
       />

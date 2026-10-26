@@ -4,6 +4,7 @@ import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
 import PoopDetail, { placeText } from '../components/PoopDetail';
 import PostMedia from '../components/PostMedia';
+import PostSound from '../components/SoundPlayer';
 import ScorePill from '../components/ScorePill';
 import Segmented from '../components/Segmented';
 import Spinner, { PageSpinner } from '../components/Spinner';
@@ -153,6 +154,7 @@ export default function Feed() {
                 </div>
                 {p.note && <p className="note">{p.note}</p>}
                 <PostMedia poop={p} />
+                <PostSound poop={p} />
                 <div className="entry-foot">
                   <ScorePill poop={p} />
                   <VoteButtons poop={p} />

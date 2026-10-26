@@ -49,24 +49,44 @@ export type FeedSort = 'at' | 'createdAt';
 
 /** A compressed photo for an entry (see encodePhoto). */
 export type Photo = { bytes: Uint8Array<ArrayBuffer>; type: string };
+/** A sound recording for an entry (see useRecorder), and its length in whole seconds. */
+export type Sound = { bytes: Uint8Array<ArrayBuffer>; type: string; secs: number };
+/** Media to change on save: a new one, null to remove it, undefined (or left out) to keep it. */
+export type MediaChange = { photo?: Photo | null; sound?: Sound | null };
 
 /** Photos live apart from their entry (pictures/{poopId}), so lists of entries stay light. */
 const pictures = collection(db, 'pictures');
 
-/** Stores a photo in the batch; returns the version to put on the entry. */
-function setPicture(batch: WriteBatch, poopId: string, photo: Photo): number {
+/** Recordings too (sounds/{poopId}). */
+const sounds = collection(db, 'sounds');
+
+/** Puts the media changes in the batch, and on the entry's data: versions, or deleteField() when removed. */
+function setMedia(batch: WriteBatch, poopId: string, media: MediaChange, data: Record<string, unknown>) {
   const v = Date.now();
-  batch.set(doc(pictures, poopId), { img: Bytes.fromUint8Array(photo.bytes), type: photo.type, v });
-  return v;
+  if (media.photo) {
+    batch.set(doc(pictures, poopId), { img: Bytes.fromUint8Array(media.photo.bytes), type: media.photo.type, v });
+    data.photo = v;
+  } else if (media.photo === null) {
+    batch.delete(doc(pictures, poopId));
+    data.photo = deleteField();
+  }
+  if (media.sound) {
+    batch.set(doc(sounds, poopId), { audio: Bytes.fromUint8Array(media.sound.bytes), type: media.sound.type, v });
+    data.sound = { v, secs: media.sound.secs };
+  } else if (media.sound === null) {
+    batch.delete(doc(sounds, poopId));
+    data.sound = deleteField();
+  }
 }
 
-/** A new entry, with its photo in the same batch. */
-export function addPoop(userId: string, p: NewPoop, photo?: Photo) {
+/** A new entry, with its photo and sound in the same batch. */
+export function addPoop(userId: string, p: NewPoop, media: MediaChange = {}) {
   const ref = doc(poops);
   const batch = writeBatch(db);
   const data: Record<string, unknown> = { ...p, userId, at: Timestamp.fromDate(p.at), createdAt: serverTimestamp() };
-  if (photo) data.photo = setPicture(batch, ref.id, photo);
   for (const k of Object.keys(data)) if (data[k] === undefined || data[k] === '') delete data[k];
+  // Nothing to remove on a new entry.
+  setMedia(batch, ref.id, { photo: media.photo ?? undefined, sound: media.sound ?? undefined }, data);
   batch.set(ref, data);
   return batch.commit();
 }
@@ -75,38 +95,38 @@ const OPTIONAL = ['placeNote', 'duration', 'rating', 'color', 'note', 'perfect',
 
 /**
  * Owner edit: every field is rewritten, empty optional ones removed. Votes, author and createdAt stay.
- * `photo`: a new one, null to remove it, undefined to keep it as is.
+ * Photo and sound change only as `media` says.
  */
-export function updatePoop(id: string, p: NewPoop, photo?: Photo | null) {
+export function updatePoop(id: string, p: NewPoop, media: MediaChange = {}) {
   const batch = writeBatch(db);
   const data: Record<string, unknown> = { at: Timestamp.fromDate(p.at), type: p.type, size: p.size, place: p.place };
   for (const k of OPTIONAL) data[k] = p[k] === undefined || p[k] === '' ? deleteField() : p[k];
-  if (photo) data.photo = setPicture(batch, id, photo);
-  else if (photo === null) {
-    data.photo = deleteField();
-    batch.delete(doc(pictures, id));
-  }
+  setMedia(batch, id, media, data);
   batch.update(doc(poops, id), data);
   return batch.commit();
 }
 
-/** Object URLs of the photos already loaded, by entry and version. */
-const pictureUrls = new Map<string, string>();
+/** Object URLs of the photos and sounds already loaded, by collection, entry and version. */
+const mediaUrls = new Map<string, string>();
 
-/** An entry's photo as an object URL, or null if there is none. The local cache answers when it has that version. */
-export async function getPicture(poopId: string, v: number): Promise<string | null> {
-  const key = `${poopId}:${v}`;
-  const hit = pictureUrls.get(key);
+/** A stored photo or sound as an object URL, or null if there is none. The local cache answers when it has that version. */
+async function getMedia(kind: 'pictures' | 'sounds', poopId: string, v: number): Promise<string | null> {
+  const key = `${kind}/${poopId}:${v}`;
+  const hit = mediaUrls.get(key);
   if (hit) return hit;
-  const ref = doc(pictures, poopId);
+  const ref = doc(kind === 'pictures' ? pictures : sounds, poopId);
   let snap = await getDocFromCache(ref).catch(() => null);
   if (!snap?.exists() || snap.data().v !== v) snap = await getDoc(ref);
   if (!snap.exists()) return null;
-  const d = snap.data() as { img: Bytes; type: string };
-  const url = URL.createObjectURL(new Blob([d.img.toUint8Array() as Uint8Array<ArrayBuffer>], { type: d.type }));
-  pictureUrls.set(key, url);
+  const d = snap.data() as { img?: Bytes; audio?: Bytes; type: string };
+  const bytes = (d.img ?? d.audio)!.toUint8Array() as Uint8Array<ArrayBuffer>;
+  const url = URL.createObjectURL(new Blob([bytes], { type: d.type }));
+  mediaUrls.set(key, url);
   return url;
 }
+
+export const getPicture = (poopId: string, v: number) => getMedia('pictures', poopId, v);
+export const getSound = (poopId: string, v: number) => getMedia('sounds', poopId, v);
 
 /** One entry, or null if it does not exist. The local cache answers first, so a bad connection doesn't stall. */
 export async function getPoop(id: string): Promise<Poop | null> {
@@ -122,6 +142,7 @@ export async function deletePoop(id: string) {
   const batch = writeBatch(db);
   thread.docs.forEach((d) => batch.delete(d.ref));
   batch.delete(doc(pictures, id));
+  batch.delete(doc(sounds, id));
   batch.delete(doc(poops, id));
   return batch.commit();
 }
@@ -412,8 +433,8 @@ export async function removeUser(userId: string) {
 
   const threads = await Promise.all(entries.docs.map((d) => getDocs(commentsOf(d.id))));
   const refs = [
-    // Each thread and photo goes before its entry, in the same batch or an earlier one.
-    ...entries.docs.flatMap((d, i) => [...threads[i].docs.map((c) => c.ref), doc(pictures, d.id), d.ref]),
+    // Each thread, photo and sound goes before its entry, in the same batch or an earlier one.
+    ...entries.docs.flatMap((d, i) => [...threads[i].docs.map((c) => c.ref), doc(pictures, d.id), doc(sounds, d.id), d.ref]),
     ...userKeys.map((k) => doc(keys, k)),
     doc(avatars, userId),
     doc(users, userId),

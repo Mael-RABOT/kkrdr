@@ -163,6 +163,52 @@ describe('entry pictures', () => {
   });
 });
 
+describe('entry sounds', () => {
+  beforeEach(async () => {
+    await link('dev1', 'bobkey', 'bob');
+    await link('dev2', 'alicekey', 'alice');
+  });
+  const audio = (v: number, n = 1000, type = 'audio/webm;codecs=opus') => ({ audio: Bytes.fromUint8Array(new Uint8Array(n)), type, v });
+  /** An entry and its sound, in one batch, as the app writes them. */
+  const withSound = (uid: string, id: string, sound: object, rec: object) => {
+    const d = db(uid);
+    const b = writeBatch(d);
+    b.set(doc(d, `poops/${id}`), poop('bob', { sound }));
+    b.set(doc(d, `sounds/${id}`), rec);
+    return b.commit();
+  };
+
+  it('can be added with its entry by the owner, and read with a valid session', async () => {
+    await assertSucceeds(withSound('dev1', 's1', { v: 5, secs: 7 }, audio(5)));
+    await assertSucceeds(withSound('dev1', 's2', { v: 6, secs: 30 }, audio(6, 1000, 'audio/mp4')));
+    await assertSucceeds(getDoc(doc(db('dev2'), 'sounds/s1')));
+    await assertFails(getDoc(doc(db('nobody'), 'sounds/s1')));
+  });
+  it('rejects bad lengths, sizes, types, versions, or a sound without its entry', async () => {
+    await assertFails(withSound('dev1', 's1', { v: 5, secs: 31 }, audio(5)));
+    await assertFails(withSound('dev1', 's1', { v: 5, secs: 0 }, audio(5)));
+    await assertFails(withSound('dev1', 's1', { v: 5, secs: 3, extra: 1 }, audio(5)));
+    await assertFails(withSound('dev1', 's1', { v: 5, secs: 3 }, audio(5, 500_001)));
+    await assertFails(withSound('dev1', 's1', { v: 5, secs: 3 }, audio(5, 1000, 'text/html')));
+    await assertFails(withSound('dev1', 's1', { v: 5, secs: 3 }, audio(6)));
+    await assertFails(setDoc(doc(db('dev1'), 'sounds/s1'), audio(5)));
+  });
+  it('can be removed by the owner with the entry, not by someone else', async () => {
+    await assertSucceeds(withSound('dev1', 's1', { v: 5, secs: 7 }, audio(5)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users/carol'), { name: 'Carol', admin: false, active: true });
+      await setDoc(doc(ctx.firestore(), 'keys/carolkey'), { userId: 'carol' });
+    });
+    await link('dev3', 'carolkey', 'carol');
+    await assertFails(deleteDoc(doc(db('dev3'), 'sounds/s1')));
+    const d = db('dev1');
+    const b = writeBatch(d);
+    b.update(doc(d, 'poops/s1'), { sound: deleteField() });
+    b.delete(doc(d, 'sounds/s1'));
+    await assertSucceeds(b.commit());
+  });
+});
+
 describe('avatars', () => {
   beforeEach(() => link('dev1', 'bobkey', 'bob'));
   const pic = (n = 1000, type = 'image/webp') => ({ img: Bytes.fromUint8Array(new Uint8Array(n)), type, updatedAt: serverTimestamp() });

@@ -31,8 +31,10 @@ export interface Poop {
   createdAt?: Date;
   /** A photo for context (not of the poop): its version, the image itself is in pictures/{id}. */
   photo?: number;
-  /** Or a GIF, by its GIPHY URL. */
+  /** Or a GIF, by its Tenor / GIPHY URL. */
   gif?: string;
+  /** A sound recording (a fart, a word…): its version and length; the audio is in sounds/{id}. */
+  sound?: { v: number; secs: number };
   /** How many comments, kept in step with the comments subcollection. */
   commentCount?: number;
   /** Local changes not synced yet (client only, never stored). */

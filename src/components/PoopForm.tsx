@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import type { NewPoop, Photo } from '../data';
+import type { MediaChange, NewPoop } from '../data';
 import { useDialogs } from '../dialogs';
 import { fmtNum, toLocalInput } from '../format';
 import { baseScore } from '../game';
@@ -7,6 +7,7 @@ import { useT, type Key } from '../i18n';
 import { PLACE_IDS, SIZE_IDS, type Color, type Place, type Poop, type Size } from '../types';
 import ColorPicker from './ColorPicker';
 import PictureField, { initialAttachment, type Attachment } from './PictureField';
+import SoundField, { initialSound, type SoundValue } from './SoundField';
 import Segmented from './Segmented';
 import TypePicker from './TypePicker';
 
@@ -16,8 +17,8 @@ interface Props {
   /** Entry being edited; a new one starts from now, smooth, medium, at home. */
   initial?: Poop;
   submitLabel: string;
-  /** `photo`: a new one, null to remove the current one, undefined to leave it. */
-  onSave: (p: NewPoop, photo?: Photo | null) => void;
+  /** `media`: the photo and sound to set or remove; left out, they stay as they are. */
+  onSave: (p: NewPoop, media: MediaChange) => void;
   /** Extra content under the save button (e.g. delete on the edit page). */
   footer?: ReactNode;
 }
@@ -39,9 +40,12 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
   const [perfect, setPerfect] = useState(initial?.perfect ?? false);
   const [note, setNote] = useState(initial?.note ?? '');
   const [attachment, setAttachment] = useState<Attachment>(() => initialAttachment(initial));
+  const [sound, setSound] = useState<SoundValue>(() => initialSound(initial));
+  const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const ready = !!type && !!size && !!place && (perfect || !!rating) && !!note.trim();
+  // Not mid-recording: the sound would be lost.
+  const ready = !!type && !!size && !!place && (perfect || !!rating) && !!note.trim() && !recording;
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -55,6 +59,7 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
     setBusy(true);
     // The current photo goes when it is removed or replaced by a GIF.
     const photo = attachment.kind === 'photo' ? attachment.photo : attachment.kind === 'current' || !initial?.photo ? undefined : null;
+    const recorded = sound.kind === 'new' ? sound.sound : sound.kind === 'current' || !initial?.sound ? undefined : null;
     onSave({
       at: date,
       // A Perfect always counts as smooth, rated 5/5.
@@ -68,7 +73,7 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
       perfect: perfect || undefined,
       note: note.trim(),
       gif: attachment.kind === 'gif' ? attachment.url : undefined,
-    }, photo);
+    }, { photo, sound: recorded });
   }
 
   async function togglePerfect() {
@@ -165,6 +170,11 @@ export default function PoopForm({ initial, submitLabel, onSave, footer }: Props
         <section className="card form-picture">
           <h2>{t('log.picture')}</h2>
           <PictureField entry={initial} value={attachment} onChange={setAttachment} />
+        </section>
+
+        <section className="card form-sound">
+          <h2>{t('sound.title')}</h2>
+          <SoundField entry={initial} value={sound} onChange={setSound} onRecording={setRecording} />
         </section>
       </div>
 

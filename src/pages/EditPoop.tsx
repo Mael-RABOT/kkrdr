@@ -46,9 +46,9 @@ export default function EditPoop() {
       <PoopForm
         initial={poop}
         submitLabel={t('log.saveChanges')}
-        onSave={(p, photo) => {
+        onSave={(p, media) => {
           // Not awaited, like a new entry: the cache shows it right away.
-          updatePoop(poop.id, p, photo).catch((err) => dialogs.alert(t('log.saveFailed', { msg: errorMsg(err) })));
+          updatePoop(poop.id, p, media).catch((err) => dialogs.alert(t('log.saveFailed', { msg: errorMsg(err) })));
           back();
         }}
         footer={

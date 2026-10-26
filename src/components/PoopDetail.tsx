@@ -9,6 +9,7 @@ import { ColorDot } from './ColorPicker';
 import Comments from './Comments';
 import Modal from './Modal';
 import PostMedia from './PostMedia';
+import PostSound from './SoundPlayer';
 import ScorePill from './ScorePill';
 import TypeIcon from './TypeIcon';
 import VoteButtons from './VoteButtons';
@@ -65,6 +66,7 @@ export default function PoopDetail({ poop: p, onClose, focusComments }: { poop: 
       </div>
 
       <PostMedia poop={p} />
+      <PostSound poop={p} />
 
       <dl className="detail-fields">
         <div>

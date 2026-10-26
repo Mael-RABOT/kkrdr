@@ -1,6 +1,13 @@
 /** What changed in each version, newest first. Written by hand at each release. */
 export const CHANGELOG: { version: string; items: { en: string; fr: string }[] }[] = [
   {
+    version: '1.11.0',
+    items: [
+      { en: 'Add a sound to an entry: record up to 30 seconds (a fart, a comment, anything).', fr: 'Ajoute un son à un poop : enregistre jusqu’à 30 secondes (un pet, un commentaire, n’importe quoi).' },
+      { en: 'Play it right from the feed.', fr: 'Écoute-le directement depuis le fil.' },
+    ],
+  },
+  {
     version: '1.10.0',
     items: [
       { en: 'Add a picture to an entry: from the camera, the gallery, or a GIF searched right in the app.', fr: 'Ajoute une image à un poop : appareil photo, galerie, ou un GIF cherché directement dans l’app.' },
