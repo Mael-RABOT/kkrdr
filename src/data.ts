@@ -29,7 +29,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Report, ReportData } from './reports';
-import type { Comment, Poop, PoopDoc } from './types';
+import type { Comment, Mention, Poop, PoopDoc } from './types';
 
 const poops = collection(db, 'poops');
 
@@ -134,8 +134,8 @@ export function vote(poopId: string, userId: string, value: 1 | -1 | null) {
 const commentsOf = (poopId: string) => collection(poops, poopId, 'comments');
 
 function toComment(snap: DocumentSnapshot): Comment {
-  const d = snap.data({ serverTimestamps: 'estimate' }) as { userId: string; text: string; createdAt: Timestamp; editedAt?: Timestamp };
-  const c: Comment = { id: snap.id, userId: d.userId, text: d.text, createdAt: d.createdAt.toDate(), editedAt: d.editedAt?.toDate() };
+  const d = snap.data({ serverTimestamps: 'estimate' }) as { userId: string; text: string; createdAt: Timestamp; editedAt?: Timestamp; mentions?: string[] };
+  const c: Comment = { id: snap.id, userId: d.userId, text: d.text, createdAt: d.createdAt.toDate(), editedAt: d.editedAt?.toDate(), mentions: d.mentions };
   if (snap.metadata.hasPendingWrites) c.pending = true;
   return c;
 }
@@ -150,15 +150,16 @@ export function subscribeComments(poopId: string, cb: (c: Comment[]) => void, on
   );
 }
 
-export function addComment(poopId: string, userId: string, text: string) {
+/** `mentions`: who the text tags (see mentionedIds), stored so they can find it. */
+export function addComment(poopId: string, userId: string, text: string, mentions: string[]) {
   const batch = writeBatch(db);
-  batch.set(doc(commentsOf(poopId)), { userId, text, createdAt: serverTimestamp() });
+  batch.set(doc(commentsOf(poopId)), { userId, text, createdAt: serverTimestamp(), ...(mentions.length && { mentions }) });
   batch.update(doc(poops, poopId), { commentCount: increment(1) });
   return batch.commit();
 }
 
-export function editComment(poopId: string, id: string, text: string) {
-  return updateDoc(doc(commentsOf(poopId), id), { text, editedAt: serverTimestamp() });
+export function editComment(poopId: string, id: string, text: string, mentions: string[]) {
+  return updateDoc(doc(commentsOf(poopId), id), { text, mentions: mentions.length ? mentions : deleteField(), editedAt: serverTimestamp() });
 }
 
 export function deleteComment(poopId: string, id: string) {
@@ -166,6 +167,23 @@ export function deleteComment(poopId: string, id: string) {
   batch.delete(doc(commentsOf(poopId), id));
   batch.update(doc(poops, poopId), { commentCount: increment(-1) });
   return batch.commit();
+}
+
+/** The newest n comments tagging a user, on any entry, newest first. */
+const mentionsOf = (userId: string, n: number) =>
+  query(collectionGroup(db, 'comments'), where('mentions', 'array-contains', userId), orderBy('createdAt', 'desc'), limit(n));
+
+const toMention = (d: DocumentSnapshot): Mention => ({ poopId: d.ref.parent.parent!.id, comment: toComment(d) });
+
+/** A user's mentions, live. */
+export function subscribeMentions(userId: string, n: number, cb: (m: Mention[]) => void, onError: (e: Error) => void) {
+  return onSnapshot(mentionsOf(userId, n), (snap) => cb(snap.docs.map(toMention)), onError);
+}
+
+/** A user's mentions straight from the server, not the local cache (on start and when the app comes back). */
+export async function fetchMentions(userId: string, n: number): Promise<Mention[]> {
+  const snap = await getDocsFromServer(mentionsOf(userId, n));
+  return snap.docs.map(toMention);
 }
 
 // ---- reports ----

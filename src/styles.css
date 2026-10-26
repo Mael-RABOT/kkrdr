@@ -953,6 +953,85 @@ button.link.danger {
   height: 24px;
   padding: 0 10px;
 }
+.notif-btn {
+  position: relative;
+}
+.notif-count {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.notif-modal {
+  overflow-y: auto;
+}
+.notif-modal h2 {
+  margin-top: 0;
+}
+.notif-list {
+  list-style: none;
+  margin: 0 -8px;
+  padding: 0;
+}
+.notif-list button {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+}
+.notif-list button:hover {
+  background: var(--accent-soft);
+}
+.notif-list button.new {
+  background: var(--accent-soft);
+}
+.notif-list button.new strong::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+}
+.notif-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.notif-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 0.8rem;
+}
+.notif-text {
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .modal {
   width: min(400px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);

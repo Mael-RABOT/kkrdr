@@ -48,7 +48,15 @@ for (let day = 0; day < 45; day++) {
       const comments = people.filter(([other]) => other !== uid && Math.random() < 0.2);
       for (const [other] of comments) {
         const createdAt = new Date(Math.min(now.getTime(), at.getTime() + Math.random() * 3 * 3600_000));
-        await put(`poops/${id}/comments/${other}`, { userId: other, text: lines[Math.floor(Math.random() * lines.length)], createdAt });
+        const text = lines[Math.floor(Math.random() * lines.length)];
+        // Some tag the entry's author, so there are notifications to see.
+        const tag = Math.random() < 0.3 ? people.find(([p]) => p === uid) : null;
+        await put(`poops/${id}/comments/${other}`, {
+          userId: other,
+          text: tag ? `@${tag[1]} ${text}` : text,
+          ...(tag && { mentions: [uid] }),
+          createdAt,
+        });
       }
       await put(`poops/${id}`, {
         userId: uid,

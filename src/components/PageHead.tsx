@@ -4,6 +4,7 @@ import { useOnline } from '../useOnline';
 import AppVersion from './AppVersion';
 import InstallButton from './InstallButton';
 import LangSwitch from './LangSwitch';
+import NotificationBell from './NotificationBell';
 import ThemeSwitch from './ThemeSwitch';
 
 export default function PageHead({ title }: { title: string }) {
@@ -21,6 +22,7 @@ export default function PageHead({ title }: { title: string }) {
         </span>
         <span className="head-controls">
           <InstallButton />
+          <NotificationBell />
           <ThemeSwitch />
           <LangSwitch />
           <AppVersion />

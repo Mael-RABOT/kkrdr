@@ -4,7 +4,7 @@ import { addComment, deleteComment, editComment, subscribeComments } from '../da
 import { useDialogs } from '../dialogs';
 import { dayLabel, timeOfDay } from '../format';
 import { useT } from '../i18n';
-import { mentionQuery, splitMentions, suggest } from '../mentions';
+import { mentionedIds, mentionQuery, splitMentions, suggest } from '../mentions';
 import { useSession } from '../session';
 import type { Comment, Poop, User } from '../types';
 import { useProfilePath } from '../users';
@@ -39,16 +39,16 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
     const v = text.trim();
     if (!me || !v) return;
     // Queued offline like other writes: clear the box at once.
-    addComment(poop.id, me.id, v).catch(fail);
+    addComment(poop.id, me.id, v, mentionedIds(v, users.values(), me.id)).catch(fail);
     setText('');
   }
 
   function save() {
-    if (!editing) return;
+    if (!editing || !me) return;
     const v = editing.text.trim();
     if (!v) return;
     const before = comments?.find((c) => c.id === editing.id)?.text;
-    if (v !== before) editComment(poop.id, editing.id, v).catch(fail);
+    if (v !== before) editComment(poop.id, editing.id, v, mentionedIds(v, users.values(), me.id)).catch(fail);
     setEditing(null);
   }
 
@@ -70,18 +70,6 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
     // After React has put the new text in.
     requestAnimationFrame(() => el.setSelectionRange(el.value.length, el.value.length));
     section.current?.scrollIntoView({ block: 'end' });
-  }
-
-  function render(text: string) {
-    return splitMentions(text, users.values()).map((part, i) =>
-      typeof part === 'string' ? (
-        part
-      ) : (
-        <Link key={i} to={profilePath(part.user.id)} onClick={onNavigate} className={`mention${part.user.id === me?.id ? ' me' : ''}`}>
-          @{part.user.name}
-        </Link>
-      ),
-    );
   }
 
   const count = comments?.length ?? poop.commentCount ?? 0;
@@ -131,7 +119,9 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
                     />
                   ) : (
                     <>
-                      <p className="comment-text">{render(c.text)}</p>
+                      <p className="comment-text">
+                        <MentionText text={c.text} onNavigate={onNavigate} />
+                      </p>
                       <span className="comment-actions">
                         {!mine && name && (
                           <button type="button" className="link" onClick={() => reply(c)}>
@@ -171,6 +161,28 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
       />
     </section>
   );
+}
+
+/**
+ * A comment's text with its @mentions highlighted (yours more). With `onNavigate` they link to the
+ * profiles; without, they are plain text (inside something already clickable).
+ */
+export function MentionText({ text, onNavigate }: { text: string; onNavigate?: () => void }) {
+  const { me, users } = useSession();
+  const profilePath = useProfilePath();
+  return splitMentions(text, users.values()).map((part, i) => {
+    if (typeof part === 'string') return part;
+    const className = `mention${part.user.id === me?.id ? ' me' : ''}`;
+    return onNavigate ? (
+      <Link key={i} to={profilePath(part.user.id)} onClick={onNavigate} className={className}>
+        @{part.user.name}
+      </Link>
+    ) : (
+      <span key={i} className={className}>
+        @{part.user.name}
+      </span>
+    );
+  });
 }
 
 /** A comment text box with its buttons below; typing @ suggests people to tag. */

@@ -54,3 +54,12 @@ export function splitMentions(text: string, users: Iterable<User>): Part[] {
   if (plain) parts.push(plain);
   return parts;
 }
+
+/** Who a comment pings: the users tagged in it, without its author, each once, at most 10 (see the rules). */
+export function mentionedIds(text: string, users: Iterable<User>, authorId: string): string[] {
+  const ids = new Set<string>();
+  for (const part of splitMentions(text, users)) {
+    if (typeof part !== 'string' && part.user.id !== authorId) ids.add(part.user.id);
+  }
+  return [...ids].slice(0, 10);
+}

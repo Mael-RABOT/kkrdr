@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mentionQuery, splitMentions, suggest } from './mentions';
+import { mentionedIds, mentionQuery, splitMentions, suggest } from './mentions';
 import type { User } from './types';
 
 const user = (id: string, name: string, active = true): User => ({ id, name, admin: false, active });
@@ -36,5 +36,14 @@ describe('splitMentions', () => {
     expect(splitMentions('@Bob hi', users)).toEqual(['@Bob hi']);
     expect(splitMentions('me@Sam', users)).toEqual(['me@Sam']);
     expect(splitMentions('@Samuel', users)).toEqual(['@Samuel']);
+  });
+});
+
+describe('mentionedIds', () => {
+  it('lists each tagged user once', () => {
+    expect(mentionedIds('@Sam Lee and @lou, @Lou again', users, 'x')).toEqual(['b', 'c']);
+  });
+  it('leaves out the author and text that is no mention', () => {
+    expect(mentionedIds('@Sam me@Lou @Samuel @nobody', users, 'a')).toEqual([]);
   });
 });

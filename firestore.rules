@@ -179,22 +179,24 @@ service cloud.firestore {
       }
 
       function validText(d) {
-        return d.text is string && d.text.size() > 0 && d.text.size() <= 280;
+        return d.text is string && d.text.size() > 0 && d.text.size() <= 280
+          // Who the text tags (user ids), so they can be notified.
+          && (!('mentions' in d) || (d.mentions is list && d.mentions.size() > 0 && d.mentions.size() <= 10));
       }
 
       // Comments, written in the same batch as the entry's commentCount.
       match /comments/{commentId} {
         allow read: if valid();
         allow create: if valid()
-          && request.resource.data.keys().hasOnly(['userId', 'text', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['userId', 'text', 'createdAt', 'mentions'])
           && request.resource.data.userId == sess().userId
           && validText(request.resource.data)
           && request.resource.data.createdAt == request.time
           && countAfter() == countBefore() + 1;
-        // The author may change the text.
+        // The author may change the text (and so who it tags).
         allow update: if valid()
           && resource.data.userId == sess().userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt', 'mentions'])
           && validText(request.resource.data)
           && request.resource.data.editedAt == request.time;
         // An admin may always delete (removing a user clears threads in chunks); the app still
@@ -208,9 +210,10 @@ service cloud.firestore {
       }
     }
 
-    // Removing a user finds their comments on every entry.
+    // Across entries: the comments tagging you (notifications), and an admin removing a user
+    // finds their comments. Every comment is already readable on its entry.
     match /{path=**}/comments/{commentId} {
-      allow read: if isAdmin();
+      allow read: if valid();
     }
   }
 }

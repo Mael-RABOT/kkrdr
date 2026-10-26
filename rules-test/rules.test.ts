@@ -260,6 +260,14 @@ describe('comments', () => {
     await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('carol', { text: '' })), 2));
     await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('carol', { hack: 1 })), 2));
   });
+  it('may list who it tags, as a short list', async () => {
+    await assertSucceeds(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c2'), comment('carol', { mentions: ['bob'] })), 2));
+    await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c3'), comment('carol', { mentions: 'bob' })), 2));
+    await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c3'), comment('carol', { mentions: [] })), 2));
+    await assertFails(withCount('dev3', (b, d) => b.set(doc(d, 'poops/a1/comments/c3'), comment('carol', { mentions: Array(11).fill('bob') })), 2));
+    await assertSucceeds(updateDoc(doc(db('dev1'), 'poops/a1/comments/c1'), { text: '@Carol', mentions: ['carol'], editedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(db('dev1'), 'poops/a1/comments/c1'), { text: 'nice', mentions: deleteField(), editedAt: serverTimestamp() }));
+  });
   it('can be edited by its author only, text only', async () => {
     await assertSucceeds(updateDoc(doc(db('dev1'), 'poops/a1/comments/c1'), { text: 'nicer', editedAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(db('dev3'), 'poops/a1/comments/c1'), { text: 'mine now', editedAt: serverTimestamp() }));
@@ -285,10 +293,11 @@ describe('comments', () => {
     b.delete(doc(d, 'poops/b9'));
     await assertSucceeds(b.commit());
   });
-  it('can be listed across entries by an admin only (removing a user)', async () => {
-    const q = (uid: string) => query(collectionGroup(db(uid), 'comments'), where('userId', '==', 'bob'));
-    await assertSucceeds(getDocs(q('dev2')));
-    await assertFails(getDocs(q('dev3')));
+  it('can be listed across entries with a valid session only', async () => {
+    const byBob = (uid: string) => query(collectionGroup(db(uid), 'comments'), where('userId', '==', 'bob'));
+    await assertSucceeds(getDocs(byBob('dev2')));
+    await assertSucceeds(getDocs(query(collectionGroup(db('dev3'), 'comments'), where('mentions', 'array-contains', 'carol'))));
+    await assertFails(getDocs(byBob('nobody')));
   });
   it('the count cannot be faked', async () => {
     await assertFails(updateDoc(doc(db('dev3'), 'poops/a1'), { commentCount: 3 }));

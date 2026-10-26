@@ -4,6 +4,7 @@ import { useT } from './i18n';
 import { AvatarsProvider } from './avatars';
 import { FeedProvider } from './feed';
 import { resetLocalData } from './firebase';
+import { NotificationsProvider } from './notifications';
 import { PoopsProvider } from './poops';
 import { ReportsProvider } from './reportsProvider';
 import { useSession } from './session';
@@ -38,19 +39,21 @@ export default function App() {
       <PoopsProvider>
         <ReportsProvider>
           <AvatarsProvider>
-            <main className="page">
-              <Routes>
-                <Route path="/" element={<Feed />} />
-                <Route path="/new" element={<NewPoop />} />
-                <Route path="/edit/:id" element={<EditPoop />} />
-                <Route path="/top" element={<Top />} />
-                <Route path="/stats" element={<Stats />} />
-                <Route path="/u/:name" element={<Profile />} />
-                {me?.admin && <Route path="/admin" element={<Admin />} />}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </main>
-            <TabBar />
+            <NotificationsProvider>
+              <main className="page">
+                <Routes>
+                  <Route path="/" element={<Feed />} />
+                  <Route path="/new" element={<NewPoop />} />
+                  <Route path="/edit/:id" element={<EditPoop />} />
+                  <Route path="/top" element={<Top />} />
+                  <Route path="/stats" element={<Stats />} />
+                  <Route path="/u/:name" element={<Profile />} />
+                  {me?.admin && <Route path="/admin" element={<Admin />} />}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </main>
+              <TabBar />
+            </NotificationsProvider>
           </AvatarsProvider>
         </ReportsProvider>
       </PoopsProvider>

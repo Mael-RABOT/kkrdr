@@ -47,8 +47,16 @@ export interface Comment {
   text: string;
   createdAt: Date;
   editedAt?: Date;
+  /** Users tagged with @ in the text (not the author), so they can be notified. */
+  mentions?: string[];
   /** Local changes not synced yet (client only, never stored). */
   pending?: boolean;
+}
+
+/** A comment that tags you, and the entry it is on. */
+export interface Mention {
+  poopId: string;
+  comment: Comment;
 }
 
 export const TYPE_IDS = [1, 2, 3, 4, 5, 6, 7] as const;

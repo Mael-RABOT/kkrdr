@@ -1,6 +1,13 @@
 /** What changed in each version, newest first. Written by hand at each release. */
 export const CHANGELOG: { version: string; items: { en: string; fr: string }[] }[] = [
   {
+    version: '1.9.0',
+    items: [
+      { en: 'Notifications: the notification icon in the header lists the comments that tag you, with a count of new ones.', fr: 'Notification dans la top bar' },
+      { en: 'Tap one to open the entry and its comments.', fr: 'Redirection vers chaque commentaire' },
+    ],
+  },
+  {
     version: '1.8.0',
     items: [
       { en: 'Comments on each entry: tap 💬 in the feed. Edit or delete your own.', fr: 'Ajout des commentaires sous chaque poop.' },
