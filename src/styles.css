@@ -874,6 +874,13 @@ button.link.danger {
 .page-head-top .wordmark {
   margin: 0;
 }
+.wordmark-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
 .lang-switch {
   display: inline-flex;
   background: var(--accent-soft);
@@ -984,6 +991,9 @@ button.link.danger {
   max-height: 240px;
 }
 .post-media.gif {
+  /* Its own width at that height: never stretched by a flex column (the desktop feed). */
+  align-self: flex-start;
+  width: auto;
   height: 180px;
   max-width: 100%;
   object-fit: cover;
