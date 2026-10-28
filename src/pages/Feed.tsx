@@ -10,7 +10,7 @@ import Segmented from '../components/Segmented';
 import Spinner, { PageSpinner } from '../components/Spinner';
 import VoteButtons from '../components/VoteButtons';
 import { deletePoop } from '../data';
-import { dayKey, dayLabel, fmtPts, relative } from '../format';
+import { dayKey, dayLabel, daysAgo, fmtPts, relative, shortDate } from '../format';
 import { awards } from '../game';
 import { useDialogs } from '../dialogs';
 import { useFeed } from '../feed';
@@ -107,7 +107,9 @@ export default function Feed() {
           const header =
             k !== lastDay ? (
               <li key={'day-' + k} className="day">
-                {dayLabel(when)}
+                <span className="day-label">{dayLabel(when)}</span>
+                {/* Today and yesterday say which date too. */}
+                {daysAgo(when) < 2 && <span className="day-date">{shortDate(when)}</span>}
               </li>
             ) : null;
           lastDay = k;

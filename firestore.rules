@@ -111,6 +111,13 @@ service cloud.firestore {
         && (!(me in after) || after[me] in [1, -1]);
     }
 
+    // likes is a list of user ids; a like may only add or remove yours, once.
+    function validLike(before, after, me) {
+      return after is list && (
+        (!(me in before) && after.size() == before.size() + 1 && after.toSet() == before.toSet().union([me].toSet()))
+        || (me in before && after.size() == before.size() - 1 && after.toSet() == before.toSet().difference([me].toSet())));
+    }
+
     // An entry's photo, written by its owner in the same batch as the entry, whose photo field
     // names this version. It goes with the entry.
     match /pictures/{poopId} {
@@ -253,6 +260,11 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt', 'mentions'])
           && validText(request.resource.data)
           && request.resource.data.editedAt == request.time;
+        // Anyone but the author may like it, or take their like back.
+        allow update: if valid()
+          && resource.data.userId != sess().userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+          && validLike(resource.data.get('likes', []), request.resource.data.likes, sess().userId);
         // An admin may always delete (removing a user clears threads in chunks); the app still
         // lowers the count when a single comment goes.
         allow delete: if isAdmin() || (valid() && (

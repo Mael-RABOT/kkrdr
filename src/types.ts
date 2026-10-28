@@ -58,6 +58,8 @@ export interface Comment {
   mentions?: string[];
   /** A voice message: its version and length; the audio is in poops/{poopId}/commentSounds/{id}. The text may then be empty. */
   sound?: { v: number; secs: number };
+  /** Who liked it (user ids, never the author). */
+  likes?: string[];
   /** Local changes not synced yet (client only, never stored). */
   pending?: boolean;
 }

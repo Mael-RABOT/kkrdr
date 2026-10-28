@@ -24,6 +24,8 @@ import {
   runTransaction,
   increment,
   collectionGroup,
+  arrayUnion,
+  arrayRemove,
   type DocumentReference,
   type QueryDocumentSnapshot,
   type WriteBatch,
@@ -210,7 +212,7 @@ const commentSound = (poopId: string, commentId: string) => doc(poops, poopId, '
 
 function toComment(snap: DocumentSnapshot): Comment {
   const d = snap.data({ serverTimestamps: 'estimate' }) as Omit<Comment, 'id' | 'createdAt' | 'editedAt'> & { createdAt: Timestamp; editedAt?: Timestamp };
-  const c: Comment = { id: snap.id, userId: d.userId, text: d.text, createdAt: d.createdAt.toDate(), editedAt: d.editedAt?.toDate(), mentions: d.mentions, sound: d.sound };
+  const c: Comment = { id: snap.id, userId: d.userId, text: d.text, createdAt: d.createdAt.toDate(), editedAt: d.editedAt?.toDate(), mentions: d.mentions, sound: d.sound, likes: d.likes };
   if (snap.metadata.hasPendingWrites) c.pending = true;
   return c;
 }
@@ -242,6 +244,11 @@ export function addComment(poopId: string, userId: string, text: string, mention
 
 export function editComment(poopId: string, id: string, text: string, mentions: string[]) {
   return updateDoc(doc(commentsOf(poopId), id), { text, mentions: mentions.length ? mentions : deleteField(), editedAt: serverTimestamp() });
+}
+
+/** Like someone else's comment, or (with false) take the like back. */
+export function likeComment(poopId: string, id: string, userId: string, on: boolean) {
+  return updateDoc(doc(commentsOf(poopId), id), { likes: on ? arrayUnion(userId) : arrayRemove(userId) });
 }
 
 export function deleteComment(poopId: string, c: Comment) {

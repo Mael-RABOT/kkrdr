@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type Ref } from 'react';
 import { Link } from 'react-router-dom';
 import { canRecord, COMMENT_SECS, MAX_COMMENT_SOUND_BYTES } from '../audio';
-import { addComment, deleteComment, editComment, getCommentSound, subscribeComments, type Sound } from '../data';
+import { addComment, deleteComment, editComment, getCommentSound, likeComment, subscribeComments, type Sound } from '../data';
 import { useDialogs } from '../dialogs';
 import { dayLabel, timeOfDay } from '../format';
 import { useT } from '../i18n';
@@ -148,6 +148,7 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
                         </p>
                       )}
                       <span className="comment-actions">
+                        <LikeButton comment={c} mine={mine} onToggle={(on) => me && likeComment(poop.id, c.id, me.id, on).catch(fail)} />
                         {!mine && name && (
                           <button type="button" className="link" onClick={() => reply(c)}>
                             {t('comments.reply')}
@@ -214,6 +215,37 @@ export default function Comments({ poop, autoFocus, onNavigate }: { poop: Poop; 
       />
       {recorder.error && <p className="error">{recorder.error}</p>}
     </section>
+  );
+}
+
+/** A heart and how many liked the comment. Your own comment just shows the count, if any. */
+function LikeButton({ comment, mine, onToggle }: { comment: Comment; mine: boolean; onToggle: (on: boolean) => void }) {
+  const t = useT();
+  const { me } = useSession();
+  const n = comment.likes?.length ?? 0;
+  const liked = !!me && !!comment.likes?.includes(me.id);
+  if (mine && !n) return null;
+  return (
+    <button
+      type="button"
+      className={`comment-like${liked ? ' on' : ''}`}
+      onClick={() => onToggle(!liked)}
+      disabled={mine}
+      aria-pressed={liked}
+      aria-label={t(liked ? 'comments.unlike' : 'comments.like')}
+      title={t(liked ? 'comments.unlike' : 'comments.like')}
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden>
+        <path
+          d="M8 13.5S2 10 2 6a3 3 0 0 1 6-1 3 3 0 0 1 6 1c0 4-6 7.5-6 7.5z"
+          fill={liked ? 'currentColor' : 'none'}
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {!!n && <span>{n}</span>}
+    </button>
   );
 }
 

@@ -26,15 +26,20 @@ export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Whole calendar days from d to now: 0 today, 1 yesterday. */
+export function daysAgo(d: Date, now = new Date()): number {
+  return Math.round((startOfDay(now).getTime() - startOfDay(d).getTime()) / 86_400_000);
+}
+
 export function dayLabel(d: Date, now = new Date()): string {
-  const diff = Math.round((startOfDay(now).getTime() - startOfDay(d).getTime()) / 86_400_000);
+  const diff = daysAgo(d, now);
   if (diff === 0 || diff === 1) return cap(new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }).format(-diff, 'day'));
   return cap(d.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' }));
 }
 
 /** "Today", "Yesterday", or a short weekday and date ("Sun, Oct 18"). */
 export function compactDay(d: Date, now = new Date()): string {
-  const diff = Math.round((startOfDay(now).getTime() - startOfDay(d).getTime()) / 86_400_000);
+  const diff = daysAgo(d, now);
   if (diff === 0 || diff === 1) return cap(new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }).format(-diff, 'day'));
   return cap(d.toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'short' }));
 }

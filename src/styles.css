@@ -418,13 +418,33 @@ button.link.danger {
   margin: 0;
   padding: 0;
 }
+/* A day divider: the day in a pill, its date (today, yesterday) and a rule to the edge. */
 .feed .day {
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 0 10px;
+  font-size: 0.8rem;
   font-weight: 800;
+}
+.feed .day::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--border), transparent);
+}
+.day-label {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.day-date {
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 18px 4px 8px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .feed .day:first-child {
   padding-top: 0;
@@ -2805,7 +2825,40 @@ html:has(.poop-detail[open]) body {
 }
 .comment-actions {
   display: flex;
+  align-items: center;
   gap: 14px;
+}
+.comment-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.comment-like.on {
+  color: var(--danger);
+}
+.comment-like:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.comment-like.on svg {
+  animation: like-pop 0.25s ease-out;
+}
+@keyframes like-pop {
+  50% {
+    transform: scale(1.35);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .comment-like.on svg {
+    animation: none;
+  }
 }
 .comment-form {
   position: relative;

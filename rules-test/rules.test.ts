@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, getDocs, collection, collectionGroup, query, where, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField, Bytes } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocs, collection, collectionGroup, query, where, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField, Bytes, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 let env: RulesTestEnvironment;
 
@@ -374,6 +374,20 @@ describe('comments', () => {
     await assertSucceeds(updateDoc(doc(db('dev1'), 'poops/a1/comments/c1'), { text: 'nicer', editedAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(db('dev3'), 'poops/a1/comments/c1'), { text: 'mine now', editedAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(db('dev1'), 'poops/a1/comments/c1'), { userId: 'carol' }));
+  });
+  it('can be liked once by anyone but its author, and unliked', async () => {
+    const c1 = (uid: string) => doc(db(uid), 'poops/a1/comments/c1');
+    await assertFails(updateDoc(c1('dev1'), { likes: arrayUnion('bob') }));
+    await assertFails(updateDoc(c1('dev3'), { likes: ['alice'] }));
+    await assertFails(updateDoc(c1('dev3'), { likes: ['carol', 'carol'] }));
+    await assertFails(updateDoc(c1('dev3'), { likes: arrayUnion('carol'), text: 'mine now' }));
+    await assertSucceeds(updateDoc(c1('dev3'), { likes: arrayUnion('carol') }));
+    await assertSucceeds(updateDoc(c1('dev2'), { likes: arrayUnion('alice') }));
+    await assertFails(updateDoc(c1('dev3'), { likes: ['carol'] }));
+    await assertSucceeds(updateDoc(c1('dev3'), { likes: arrayRemove('carol') }));
+    await assertFails(updateDoc(c1('dev3'), { likes: [] }));
+    // The author's edits leave them alone.
+    await assertFails(updateDoc(c1('dev1'), { text: 'nicer', likes: [], editedAt: serverTimestamp() }));
   });
   it('can be deleted by its author with the count going down', async () => {
     await assertFails(deleteDoc(doc(db('dev1'), 'poops/a1/comments/c1')));
