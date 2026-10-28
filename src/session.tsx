@@ -3,6 +3,7 @@ import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { readLocal, writeLocal } from './localCache';
+import { useOnline } from './useOnline';
 import type { User } from './types';
 
 type Status = 'loading' | 'unlinked' | 'ready';
@@ -48,6 +49,15 @@ function readCache(): CachedSession | null {
 
 const writeCache = (c: CachedSession | null) => writeLocal(CACHE, c);
 
+// ---- the key this device was linked with ----
+// Some browsers drop the anonymous auth identity between launches (privacy settings, storage eviction):
+// the device then gets a new uid with no session. Keeping the key lets it re-link silently.
+// The key is no more secret than the sessions/{uid} doc, which this device can already read.
+
+const DEVICE_KEY = 'device-key';
+const readKey = () => readLocal<string>(DEVICE_KEY);
+const writeKey = (k: string | null) => writeLocal(DEVICE_KEY, k);
+
 const toMap = (list: User[]) => new Map(list.map((u) => [u.id, u]));
 
 export function useSession() {
@@ -65,6 +75,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [authFailed, setAuthFailed] = useState(false);
   const [slow, setSlow] = useState(false);
+  const [savedKey, setSavedKey] = useState(readKey);
+  const [relinkFailed, setRelinkFailed] = useState(false);
+  const online = useOnline();
+
+  const rememberKey = useCallback((k: string | null) => {
+    writeKey(k);
+    setSavedKey(k);
+  }, []);
 
   // Silent anonymous sign-in: gives this device a stable uid (kept offline once created).
   useEffect(
@@ -98,8 +116,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       doc(db, 'sessions', uid),
       { includeMetadataChanges: true },
       (snap) => {
-        if (snap.exists()) setUserId(snap.data().userId as string);
-        else if (!snap.metadata.fromCache || !readCache()) {
+        if (snap.exists()) {
+          setUserId(snap.data().userId as string);
+          // Also backfills devices linked before the key was kept locally.
+          if (typeof snap.data().key === 'string' && snap.data().key !== readKey()) rememberKey(snap.data().key);
+        } else if (!snap.metadata.fromCache || !readCache()) {
           setUserId(null);
           writeCache(null);
         }
@@ -110,7 +131,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setLinkedChecked(true);
       },
     );
-  }, [uid]);
+  }, [uid, rememberKey]);
 
   // All users (small group); fails with permission-denied if the key was revoked.
   useEffect(() => {
@@ -137,12 +158,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       (e) => {
         if (e.code !== 'permission-denied') return setError(e.message);
         writeCache(null);
+        rememberKey(null);
         setUsers(null);
         setUserId(null);
         setError('welcome.revoked');
       },
     );
-  }, [userId, uid]);
+  }, [userId, uid, rememberKey]);
 
   const link = useCallback(
     async (rawKey: string) => {
@@ -152,22 +174,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const k = await withTimeout(getDoc(doc(db, 'keys', key)));
       if (!k.exists()) throw new Error('welcome.unknownKey');
       await withTimeout(setDoc(doc(db, 'sessions', uid), { key, userId: k.data().userId, createdAt: serverTimestamp() }));
+      rememberKey(key);
       setError(null);
     },
-    [uid],
+    [uid, rememberKey],
   );
+
+  // This device lost its session (new uid) but remembers its key: link again without asking.
+  const relinking = !!uid && linkedChecked && !userId && !!savedKey && !relinkFailed && online;
+  useEffect(() => {
+    if (!relinking || !savedKey) return;
+    link(savedKey).catch((e) => {
+      if (e instanceof Error && e.message === 'welcome.unknownKey') rememberKey(null);
+      setRelinkFailed(true);
+    });
+  }, [relinking, savedKey, link, rememberKey]);
 
   const unlink = useCallback(async () => {
     writeCache(null);
+    rememberKey(null);
     setUserId(null);
     if (uid) await deleteDoc(doc(db, 'sessions', uid));
-  }, [uid]);
+  }, [uid, rememberKey]);
 
   const me = userId && users ? (users.get(userId) ?? null) : null;
   let status: Status = 'loading';
   if (users && me?.active) status = 'ready';
+  else if (relinking) status = 'loading';
   else if ((linkedChecked && !userId) || authFailed) status = 'unlinked';
   else if (users) status = 'unlinked';
+
+  // Ask the browser not to evict this site's storage (auth identity included) under pressure.
+  useEffect(() => {
+    if (status === 'ready') void navigator.storage?.persist?.().catch(() => {});
+  }, [status]);
 
   // Never sit on the loading screen silently.
   useEffect(() => {
