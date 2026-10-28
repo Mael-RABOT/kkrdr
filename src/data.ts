@@ -32,6 +32,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Report, ReportData } from './reports';
+import type { Wardrobe } from './shop';
 import type { Comment, Mention, Poop, PoopDoc } from './types';
 
 const poops = collection(db, 'poops');
@@ -310,6 +311,26 @@ export function createReport(id: string, r: Omit<ReportData, 'createdAt'> & { st
   });
 }
 
+// ---- title shop ----
+
+/** Who owns and wears which titles: titles/{userId}. */
+const titles = collection(db, 'titles');
+
+/** Everyone's titles by user id, live. */
+export function subscribeTitles(cb: (m: Map<string, Wardrobe>) => void, onError: (e: Error) => void) {
+  return onSnapshot(titles, (snap) => cb(new Map(snap.docs.map((d) => [d.id, d.data() as Wardrobe]))), onError);
+}
+
+/** Buys a title. The rules check the price; that the buyer can afford it is checked by the app only. */
+export function buyTitle(userId: string, id: string, price: number) {
+  return setDoc(doc(titles, userId), { owned: { [id]: true }, spent: increment(price), last: id }, { merge: true });
+}
+
+/** Wears an owned title, or (with null) none. */
+export function wearTitle(userId: string, id: string | null) {
+  return updateDoc(doc(titles, userId), { worn: id ?? deleteField() });
+}
+
 // ---- avatars ----
 
 const avatars = collection(db, 'avatars');
@@ -462,6 +483,7 @@ export async function removeUser(userId: string) {
     ...entries.docs.flatMap((d, i) => [...threads[i].docs.flatMap((c) => (c.data().sound ? [commentSound(d.id, c.id), c.ref] : [c.ref])), doc(pictures, d.id), doc(sounds, d.id), d.ref]),
     ...userKeys.map((k) => doc(keys, k)),
     doc(avatars, userId),
+    doc(titles, userId),
     doc(users, userId),
   ];
   for (let i = 0; i < refs.length; i += 450) {

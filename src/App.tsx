@@ -7,6 +7,7 @@ import { resetLocalData } from './firebase';
 import { NotificationsProvider } from './notifications';
 import { PoopsProvider } from './poops';
 import { ReportsProvider } from './reportsProvider';
+import { TitlesProvider } from './titlesProvider';
 import { useSession } from './session';
 import Spinner from './components/Spinner';
 import TabBar from './components/TabBar';
@@ -17,6 +18,7 @@ import EditPoop from './pages/EditPoop';
 import Stats from './pages/Stats';
 import Top from './pages/Top';
 import Profile from './pages/Profile';
+import Shop from './pages/Shop';
 import Admin from './pages/Admin';
 
 export default function App() {
@@ -38,23 +40,26 @@ export default function App() {
     <FeedProvider>
       <PoopsProvider>
         <ReportsProvider>
-          <AvatarsProvider>
-            <NotificationsProvider>
-              <main className="page">
-                <Routes>
-                  <Route path="/" element={<Feed />} />
-                  <Route path="/new" element={<NewPoop />} />
-                  <Route path="/edit/:id" element={<EditPoop />} />
-                  <Route path="/top" element={<Top />} />
-                  <Route path="/stats" element={<Stats />} />
-                  <Route path="/u/:name" element={<Profile />} />
-                  {me?.admin && <Route path="/admin" element={<Admin />} />}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </main>
-              <TabBar />
-            </NotificationsProvider>
-          </AvatarsProvider>
+          <TitlesProvider>
+            <AvatarsProvider>
+              <NotificationsProvider>
+                <main className="page">
+                  <Routes>
+                    <Route path="/" element={<Feed />} />
+                    <Route path="/new" element={<NewPoop />} />
+                    <Route path="/edit/:id" element={<EditPoop />} />
+                    <Route path="/top" element={<Top />} />
+                    <Route path="/stats" element={<Stats />} />
+                    <Route path="/u/:name" element={<Profile />} />
+                    <Route path="/shop" element={<Shop />} />
+                    {me?.admin && <Route path="/admin" element={<Admin />} />}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </main>
+                <TabBar />
+              </NotificationsProvider>
+            </AvatarsProvider>
+          </TitlesProvider>
         </ReportsProvider>
       </PoopsProvider>
     </FeedProvider>

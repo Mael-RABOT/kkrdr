@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { useAvatar, useRefreshAvatar } from '../avatars';
 import Avatar from '../components/Avatar';
 import Badge from '../components/Badge';
@@ -9,6 +9,7 @@ import { PageSpinner } from '../components/Spinner';
 import PictureEditor from '../components/PictureEditor';
 import ScorePill from '../components/ScorePill';
 import Timeline from '../components/Timeline';
+import UserTitle from '../components/UserTitle';
 import { removeAvatar, setAvatar } from '../data';
 import { useDialogs } from '../dialogs';
 import { fmtMinutes, fmtNum, fmtPts, shortDate } from '../format';
@@ -18,7 +19,9 @@ import { usePoops } from '../poops';
 import { poopPoints } from '../reports';
 import { useReports } from '../reportsProvider';
 import { useSession } from '../session';
+import { balance } from '../shop';
 import { sitTime } from '../stats';
+import { useTitles } from '../titlesProvider';
 import { useOnline } from '../useOnline';
 import { findUser, nameKey, useProfilePath } from '../users';
 
@@ -28,6 +31,7 @@ export default function Profile() {
   const { me, users } = useSession();
   const { poops, players } = usePoops();
   const reports = useReports();
+  const titles = useTitles();
   const user = findUser(users, name);
   const id = user?.id ?? '';
   const profilePath = useProfilePath();
@@ -53,12 +57,19 @@ export default function Profile() {
         <div className="profile-main">
           <span className="profile-pills">
             {id === me?.id && <span className="pill amber">{t('common.you')}</span>}
-            {reports && (
-              <span className="pill poop-points" title={t('profile.poopPoints')}>
-                💩 {poopPoints(reports, id)}
-              </span>
-            )}
+            {reports &&
+              (id === me?.id ? (
+                // Yours: what is left to spend, and the way to the shop.
+                <Link to="/shop" className="pill poop-points shop-link" title={t('shop.balanceHint')}>
+                  💩 {balance(poopPoints(reports, id), titles.get(id)?.spent ?? 0)} · {t('shop.open')} ›
+                </Link>
+              ) : (
+                <span className="pill poop-points" title={t('profile.poopPoints')}>
+                  💩 {poopPoints(reports, id)}
+                </span>
+              ))}
           </span>
+          <UserTitle userId={id} />
           {p && <LevelBar level={p.level} xp={p.xp} />}
         </div>
       </section>

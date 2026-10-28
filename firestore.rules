@@ -166,6 +166,35 @@ service cloud.firestore {
       allow delete: if (valid() && sess().userId == userId) || isAdmin();
     }
 
+    // Title shop: the titles a user bought with poop points, and the one they wear. Earned points
+    // come from the reports, which rules can't add up: the app checks the buyer can afford it.
+    match /titles/{userId} {
+      // Kept in step with TITLES in src/shop.ts (src/shop.test.ts checks).
+      function prices() {
+        return { 'rookie': 5, 'buddy': 8, 'regular': 15, 'flusher': 20, 'knight': 30, 'scholar': 35, 'master': 50, 'lord': 50 };
+      }
+      function before() {
+        return resource == null ? { 'owned': {}, 'spent': 0 } : resource.data;
+      }
+      function bought(d) {
+        return d.last is string && d.last in prices()
+          && !(d.last in before().owned)
+          && d.owned.diff(before().owned).affectedKeys() == [d.last].toSet()
+          && d.owned[d.last] == true
+          && d.spent == before().spent + prices()[d.last];
+      }
+      allow read: if valid();
+      allow create, update: if valid() && sess().userId == userId
+        && request.resource.data.keys().hasOnly(['owned', 'spent', 'last', 'worn'])
+        && request.resource.data.owned is map
+        && request.resource.data.spent is int
+        && (!('worn' in request.resource.data) || request.resource.data.worn in request.resource.data.owned)
+        && (bought(request.resource.data)
+            // Wearing a title or taking it off.
+            || (resource != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['worn'])));
+      allow delete: if isAdmin();
+    }
+
     // Week / month reports. No server: the first client after a period ends writes it once,
     // then it never changes (an admin may delete a bad one, the next client writes it again).
     match /reports/{id} {

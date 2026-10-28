@@ -4,6 +4,7 @@ import Avatar from '../components/Avatar';
 import PageHead from '../components/PageHead';
 import RecordTile from '../components/RecordTile';
 import Segmented from '../components/Segmented';
+import UserTitle from '../components/UserTitle';
 import { PageSpinner } from '../components/Spinner';
 import { fmtMinutes, fmtNum, fmtPts, monthLabel, shortDate, timeOfDay } from '../format';
 import { awards, monthStart, netVotes, score, weekStart, type Award, type PeriodKind } from '../game';
@@ -218,6 +219,7 @@ export default function Top() {
                       <Avatar id={id} name={users.get(id)?.name} size={28} />
                       <span>
                         <strong>{users.get(id)?.name ?? t('common.unknown')}</strong>
+                        <UserTitle userId={id} />
                         <small title={t('profile.poopPoints')}>💩 {n}</small>
                       </span>
                     </Link>

@@ -1,6 +1,14 @@
 /** What changed in each version, newest first. Written by hand at each release. */
 export const CHANGELOG: { version: string; items: { en: string; fr: string }[] }[] = [
   {
+    version: '1.14.0',
+    items: [
+      { en: 'Title shop: spend your poop points on a title shown next to your name. Open it from your profile.', fr: 'Boutique de titres : dépense tes points caca pour un titre affiché à côté de ton nom. Accès depuis ton profil.' },
+      { en: 'Like comments with the ♥.', fr: 'Aime les commentaires avec le ♥.' },
+      { en: 'Clearer dividers between days in the feed.', fr: 'Séparateurs entre les jours plus lisibles dans le fil.' },
+    ],
+  },
+  {
     version: '1.12.0',
     items: [
       { en: 'Voice messages in comments, up to 15 seconds.', fr: 'Messages vocaux dans les commentaires, jusqu’à 15 secondes.' },

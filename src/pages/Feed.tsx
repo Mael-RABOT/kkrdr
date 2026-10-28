@@ -8,6 +8,7 @@ import PostSound from '../components/SoundPlayer';
 import ScorePill from '../components/ScorePill';
 import Segmented from '../components/Segmented';
 import Spinner, { PageSpinner } from '../components/Spinner';
+import UserTitle from '../components/UserTitle';
 import VoteButtons from '../components/VoteButtons';
 import { deletePoop } from '../data';
 import { dayKey, dayLabel, daysAgo, fmtPts, relative, shortDate } from '../format';
@@ -132,9 +133,12 @@ export default function Feed() {
               </Link>
               <div className="entry-body">
                 <div className="entry-top">
-                  <Link to={profilePath(p.userId)} className="entry-name">
-                    {name ?? t('common.unknown')}
-                  </Link>
+                  <span className="entry-who">
+                    <Link to={profilePath(p.userId)} className="entry-name">
+                      {name ?? t('common.unknown')}
+                    </Link>
+                    <UserTitle userId={p.userId} />
+                  </span>
                   <span className="entry-time muted">
                     {relative(p.at)}
                     {sort === 'createdAt' && p.createdAt && (

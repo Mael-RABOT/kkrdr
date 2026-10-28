@@ -423,26 +423,29 @@ button.link.danger {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 22px 0 10px;
-  font-size: 0.8rem;
+  padding: 26px 0 12px;
+  font-size: 0.85rem;
   font-weight: 800;
 }
+/* Strong enough to read on a phone outdoors: --border alone is too close to the background. */
 .feed .day::after {
   content: '';
   flex: 1;
   height: 2px;
   border-radius: 1px;
-  background: linear-gradient(to right, var(--border), transparent);
+  background: linear-gradient(to right, color-mix(in srgb, var(--accent) 45%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
 }
 .day-label {
-  padding: 3px 12px;
+  padding: 4px 12px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: var(--shadow);
   white-space: nowrap;
 }
 .day-date {
-  color: var(--muted);
+  color: var(--text);
+  opacity: 0.7;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1889,6 +1892,95 @@ img.avatar.blob,
   background: none;
   border-radius: 0;
   box-shadow: none;
+}
+/* A title bought in the shop, coloured by its tier. */
+.user-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.user-title.bronze {
+  color: var(--bronze);
+}
+.user-title.silver {
+  color: color-mix(in srgb, var(--silver) 70%, var(--text));
+}
+.user-title.gold {
+  color: var(--amber-text);
+}
+.user-title.legend {
+  background: linear-gradient(90deg, var(--accent-2), var(--danger));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.entry-who {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.profile-main > .user-title {
+  max-width: 100%;
+  font-size: 0.9rem;
+}
+a.pill.shop-link {
+  color: var(--accent);
+  font-weight: 800;
+  text-decoration: none;
+}
+.shop-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.shop-balance {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+.shop-head .hint {
+  margin: 8px 0 0;
+}
+.shop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.shop-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.shop-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.shop-item .user-title {
+  flex: 1;
+  font-size: 1rem;
+}
+.shop-price {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.shop-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.shop-missing {
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 .profile-pills {
   display: flex;

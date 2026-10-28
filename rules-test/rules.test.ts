@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   assertFails,
   assertSucceeds,
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, getDocs, collection, collectionGroup, query, where, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField, Bytes, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocs, collection, collectionGroup, query, where, setDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, deleteField, Bytes, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 
 let env: RulesTestEnvironment;
 
@@ -228,6 +228,43 @@ describe('avatars', () => {
   });
   it('is not readable without a valid session', async () => {
     await assertFails(getDoc(doc(db('nobody'), 'avatars/bob')));
+  });
+});
+
+describe('title shop', () => {
+  beforeEach(async () => {
+    await link('dev1', 'bobkey', 'bob');
+    await link('dev2', 'alicekey', 'alice');
+  });
+  const ref = (uid: string, userId = 'bob') => doc(db(uid), 'titles', userId);
+  /** What the app writes to buy one (see buyTitle). */
+  const buy = (uid: string, id: string, price: number, userId = 'bob') =>
+    setDoc(ref(uid, userId), { owned: { [id]: true }, spent: increment(price), last: id }, { merge: true });
+
+  it('buys a title at its catalog price, once', async () => {
+    await assertSucceeds(buy('dev1', 'rookie', 5));
+    await assertSucceeds(buy('dev1', 'master', 50));
+    await assertFails(buy('dev1', 'master', 50));
+    const snap = await getDoc(ref('dev2'));
+    expect(snap.data()).toEqual({ owned: { rookie: true, master: true }, spent: 55, last: 'master' });
+  });
+  it('rejects a wrong price, an unknown title or several at once', async () => {
+    await assertFails(buy('dev1', 'master', 1));
+    await assertFails(buy('dev1', 'free', 0));
+    await assertFails(setDoc(ref('dev1'), { owned: { rookie: true, buddy: true }, spent: 13, last: 'buddy' }));
+    await assertFails(setDoc(ref('dev1'), { owned: { rookie: true }, spent: 5, last: 'rookie', hack: 1 }));
+  });
+  it('is written by its owner only', async () => {
+    await assertFails(buy('dev2', 'rookie', 5));
+    await assertFails(getDoc(doc(db('nobody'), 'titles/bob')));
+  });
+  it('wears an owned title only, and can take it off', async () => {
+    await assertSucceeds(buy('dev1', 'rookie', 5));
+    await assertSucceeds(updateDoc(ref('dev1'), { worn: 'rookie' }));
+    await assertFails(updateDoc(ref('dev1'), { worn: 'master' }));
+    await assertFails(updateDoc(ref('dev1'), { worn: 'rookie', spent: 0 }));
+    await assertFails(updateDoc(ref('dev1'), { 'owned.master': true }));
+    await assertSucceeds(updateDoc(ref('dev1'), { worn: deleteField() }));
   });
 });
 
