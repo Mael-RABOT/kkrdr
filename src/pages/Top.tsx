@@ -13,9 +13,10 @@ import { usePoops } from '../poops';
 import { categoriesWon, periodEnd, POOP_POINTS, poopPoints, REPORTS_FROM } from '../reports';
 import { useReports } from '../reportsProvider';
 import { useSession } from '../session';
-import { CATEGORIES, periodWinners, type Category, type CategoryWin, type Winners } from '../stats';
+import { CATEGORIES, CATEGORY_LABELS, periodWinners, type Category, type CategoryWin, type Winners } from '../stats';
 import { useSince } from '../useSince';
 import { useProfilePath } from '../users';
+import { lastMonth, monthKey } from '../wrap';
 
 function Trophy() {
   return (
@@ -66,16 +67,6 @@ function HeroAward({ award, title, period }: { award: Award | undefined; title: 
   );
 }
 
-const LABELS: Record<Category, Key> = {
-  points: 'top.mostPoints',
-  best: 'stats.bestPoop',
-  streak: 'stats.longestStreak',
-  busiestDay: 'stats.mostInDay',
-  earliest: 'stats.earliest',
-  latest: 'stats.latest',
-  sitter: 'stats.sitter',
-};
-
 function categoryValue(c: Category, v: number, t: T): string {
   switch (c) {
     case 'points':
@@ -107,7 +98,7 @@ function Categories({ winners, reward }: { winners: Winners; reward?: number }) 
           <RecordTile
             key={c}
             wide={c === 'points'}
-            label={t(LABELS[c])}
+            label={t(CATEGORY_LABELS[c])}
             value={w ? categoryValue(c, w.value, t) : null}
             who={w ? names(w) : null}
             extra={w && reward ? `💩 +${reward}` : undefined}
@@ -131,7 +122,7 @@ interface HallRow {
 export default function Top() {
   const t = useT();
   const profilePath = useProfilePath();
-  const { users } = useSession();
+  const { me, users } = useSession();
   const reports = useReports();
   const [kind, setKind] = useState<PeriodKind>('week');
   const tabs = [
@@ -172,6 +163,10 @@ export default function Top() {
       .slice(0, 3);
   }, [mine]);
 
+  // Last month's wrap, once I logged something in it.
+  const wrapMonth = lastMonth(now);
+  const wrapReady = !!me && !!history?.some((p) => p.userId === me.id && p.at >= wrapMonth && p.at < monthStart(now));
+
   const err = running.error ?? error;
   return (
     <>
@@ -182,6 +177,15 @@ export default function Top() {
 
       {running.poops && (
         <>
+          {kind === 'month' && wrapReady && (
+            <Link to={`/wrap/${monthKey(wrapMonth)}`} className="card wrap-banner">
+              <strong>{t('wrap.banner', { month: monthLabel(wrapMonth) })}</strong>
+              <small>{t('wrap.bannerSub')}</small>
+              <span className="wrap-banner-go" aria-hidden>
+                ›
+              </span>
+            </Link>
+          )}
           <HeroAward
             award={live}
             title={t(kind === 'week' ? 'top.week' : 'top.month')}

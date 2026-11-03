@@ -52,6 +52,12 @@ export function monthLabel(d: Date): string {
   return cap(d.toLocaleDateString(lang, { month: 'long', year: 'numeric' }));
 }
 
+/** Weekday name, Monday = 0. */
+export function weekdayName(i: number): string {
+  // Jan 5th, 2026 is a Monday.
+  return new Date(2026, 0, 5 + i).toLocaleDateString(lang, { weekday: 'long' });
+}
+
 export function timeOfDay(d: Date): string {
   return d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
 }

@@ -1,6 +1,13 @@
 /** What changed in each version, newest first. Written by hand at each release. */
 export const CHANGELOG: { version: string; items: { en: string; fr: string }[] }[] = [
   {
+    version: '1.15.0',
+    items: [
+      { en: 'Monthly wrap: your month card by card (count, streak, points, texture, favourite time and place, fans, poop soulmate…), each one against the others. Open it from Top › Month or your profile.', fr: 'Bilan du mois : ton mois carte par carte (nombre, série, points, texture, heure et lieu préférés, fans, âme sœur du caca…), chacune face aux autres. Accès depuis Top › Mois ou ton profil.' },
+      { en: 'Shop: the Buy button shows its text again.', fr: 'Boutique : le bouton Acheter affiche de nouveau son texte.' },
+    ],
+  },
+  {
     version: '1.14.0',
     items: [
       { en: 'Title shop: spend your poop points on a title shown next to your name. Open it from your profile.', fr: 'Boutique de titres : dépense tes points caca pour un titre affiché à côté de ton nom. Accès depuis ton profil.' },

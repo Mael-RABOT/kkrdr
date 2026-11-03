@@ -19,6 +19,7 @@ import Stats from './pages/Stats';
 import Top from './pages/Top';
 import Profile from './pages/Profile';
 import Shop from './pages/Shop';
+import Wrap from './pages/Wrap';
 import Admin from './pages/Admin';
 
 export default function App() {
@@ -52,6 +53,7 @@ export default function App() {
                     <Route path="/stats" element={<Stats />} />
                     <Route path="/u/:name" element={<Profile />} />
                     <Route path="/shop" element={<Shop />} />
+                    <Route path="/wrap/:month?" element={<Wrap />} />
                     {me?.admin && <Route path="/admin" element={<Admin />} />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>

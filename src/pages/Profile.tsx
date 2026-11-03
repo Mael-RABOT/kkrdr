@@ -68,6 +68,11 @@ export default function Profile() {
                   💩 {poopPoints(reports, id)}
                 </span>
               ))}
+            {id === me?.id && (
+              <Link to="/wrap" className="pill shop-link">
+                ✨ {t('wrap.open')} ›
+              </Link>
+            )}
           </span>
           <UserTitle userId={id} />
           {p && <LevelBar level={p.level} xp={p.xp} />}

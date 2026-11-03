@@ -1,4 +1,5 @@
 import { dayKey, monthStart, startOfDay, weekStart } from './format';
+import type { Key } from './i18n';
 import { best, rankUsers, score, type TieBreak } from './score';
 import type { Place, Poop, Size } from './types';
 
@@ -158,6 +159,16 @@ export function computeStats(poops: Poop[], start: Date | null, now = new Date()
 /** The categories won in a week / month report: most points, then the Stats records. */
 export const CATEGORIES = ['points', 'best', 'streak', 'busiestDay', 'earliest', 'latest', 'sitter'] as const;
 export type Category = (typeof CATEGORIES)[number];
+
+export const CATEGORY_LABELS: Record<Category, Key> = {
+  points: 'top.mostPoints',
+  best: 'stats.bestPoop',
+  streak: 'stats.longestStreak',
+  busiestDay: 'stats.mostInDay',
+  earliest: 'stats.earliest',
+  latest: 'stats.latest',
+  sitter: 'stats.sitter',
+};
 
 export interface CategoryWin {
   /** Everyone tied for the top value wins. */
